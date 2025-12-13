@@ -2,21 +2,18 @@
 export enum UserRole {
   USER = 'USER',
   ADMIN = 'ADMIN',
-  MEMBER = 'MEMBER',
 }
 
 export interface User {
   id: string;
   email: string;
-  name?: string;
-  firstName?: string;
-  lastName?: string;
+  firstName: string;
+  lastName: string;
   avatar?: string;
   role: UserRole;
-  isActive?: boolean;
-  teamIds?: string[];
-  createdAt?: Date;
-  updatedAt?: Date;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface AuthResponse {
