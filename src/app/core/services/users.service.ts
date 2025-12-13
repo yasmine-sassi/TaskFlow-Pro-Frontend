@@ -1,8 +1,7 @@
-import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { environment } from '../../../environments/environment';
 import { User } from '../models/user.model';
+import { BaseService } from './base.service';
 
 export interface UpdateProfileDto {
   firstName?: string;
@@ -18,42 +17,39 @@ export interface ChangePasswordDto {
 @Injectable({
   providedIn: 'root',
 })
-export class UsersService {
-  private readonly http = inject(HttpClient);
-  private readonly apiUrl = `${environment.apiUrl}/users`;
-
+export class UsersService extends BaseService {
   /**
    * Get all users (Admin only)
    */
   getAllUsers(): Observable<User[]> {
-    return this.http.get<User[]>(this.apiUrl);
+    return this.http.get<User[]>(this.buildUrl('/users'));
   }
 
   /**
    * Get current user profile
    */
   getProfile(): Observable<User> {
-    return this.http.get<User>(`${this.apiUrl}/profile`);
+    return this.http.get<User>(this.buildUrl('/users/profile'));
   }
 
   /**
    * Update current user profile
    */
   updateProfile(dto: UpdateProfileDto): Observable<User> {
-    return this.http.patch<User>(`${this.apiUrl}/profile`, dto);
+    return this.http.patch<User>(this.buildUrl('/users/profile'), dto);
   }
 
   /**
    * Change password
    */
   changePassword(dto: ChangePasswordDto): Observable<void> {
-    return this.http.post<void>(`${this.apiUrl}/change-password`, dto);
+    return this.http.post<void>(this.buildUrl('/users/change-password'), dto);
   }
 
   /**
    * Delete account
    */
   deleteAccount(): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/profile`);
+    return this.http.delete<void>(this.buildUrl('/users/profile'));
   }
 }

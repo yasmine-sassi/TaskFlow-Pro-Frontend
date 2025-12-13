@@ -1,8 +1,8 @@
-import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { Injectable } from '@angular/core';
+import { HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Task, TaskStatus, TaskPriority } from '../models/task.model';
-import { environment } from '../../../environments/environment';
+import { BaseService } from './base.service';
 
 export interface CreateTaskDto {
   title: string;
@@ -47,15 +47,12 @@ export interface TaskListResponse {
 @Injectable({
   providedIn: 'root',
 })
-export class TasksService {
-  private http = inject(HttpClient);
-  private apiUrl = `${environment.apiUrl}/tasks`;
-
+export class TasksService extends BaseService {
   /**
    * Create a new task
    */
   createTask(dto: CreateTaskDto): Observable<Task> {
-    return this.http.post<Task>(this.apiUrl, dto);
+    return this.http.post<Task>(this.buildUrl('/tasks'), dto);
   }
 
   /**
@@ -73,28 +70,30 @@ export class TasksService {
       if (filter.limit) params = params.set('limit', filter.limit.toString());
     }
 
-    return this.http.get<TaskListResponse>(`${this.apiUrl}/project/${projectId}`, { params });
+    return this.http.get<TaskListResponse>(this.buildUrl(`/tasks/project/${projectId}`), {
+      params,
+    });
   }
 
   /**
    * Get a single task by ID
    */
   getTaskById(id: string): Observable<Task> {
-    return this.http.get<Task>(`${this.apiUrl}/${id}`);
+    return this.http.get<Task>(this.buildUrl(`/tasks/${id}`));
   }
 
   /**
    * Update a task
    */
   updateTask(id: string, dto: UpdateTaskDto): Observable<Task> {
-    return this.http.patch<Task>(`${this.apiUrl}/${id}`, dto);
+    return this.http.patch<Task>(this.buildUrl(`/tasks/${id}`), dto);
   }
 
   /**
    * Delete a task
    */
   deleteTask(id: string): Observable<{ message: string }> {
-    return this.http.delete<{ message: string }>(`${this.apiUrl}/${id}`);
+    return this.http.delete<{ message: string }>(this.buildUrl(`/tasks/${id}`));
   }
 
   /**
@@ -108,13 +107,15 @@ export class TasksService {
    * Assign a user to a task
    */
   assignUser(taskId: string, userId: string): Observable<Task> {
-    return this.http.post<Task>(`${this.apiUrl}/${taskId}/assign`, { userId });
+    return this.http.post<Task>(this.buildUrl(`/tasks/${taskId}/assign`), { userId });
   }
 
   /**
    * Unassign a user from a task
    */
   unassignUser(taskId: string, userId: string): Observable<{ message: string }> {
-    return this.http.delete<{ message: string }>(`${this.apiUrl}/${taskId}/assign/${userId}`);
+    return this.http.delete<{ message: string }>(
+      this.buildUrl(`/tasks/${taskId}/assign/${userId}`)
+    );
   }
 }

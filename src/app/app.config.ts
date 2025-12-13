@@ -10,6 +10,9 @@ import { loadingInterceptor } from './core/interceptors/loading.interceptor';
 import { loggingInterceptor } from './core/interceptors/logging.interceptor';
 import { environment } from '../environments/environment';
 
+import { API_CONFIG, ApiConfig } from './core/tokens/api-config.token';
+import { ENVIRONMENT } from './core/tokens/environment.token';
+
 export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(routes),
@@ -21,5 +24,17 @@ export const appConfig: ApplicationConfig = {
         errorInterceptor, // Last - handle errors
       ])
     ),
+    {
+      provide: API_CONFIG,
+      useValue: {
+        apiUrl: environment.apiUrl,
+        timeout: 30000,
+        retryAttempts: 3,
+      } as ApiConfig,
+    },
+    {
+      provide: ENVIRONMENT,
+      useValue: environment,
+    },
   ],
 };

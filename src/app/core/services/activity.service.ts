@@ -1,8 +1,8 @@
-import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { Injectable } from '@angular/core';
+import { HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Activity } from '../models/activity.model';
-import { environment } from '../../../environments/environment';
+import { BaseService } from './base.service';
 
 interface ActivityListResponse {
   data: Activity[];
@@ -17,10 +17,7 @@ interface ActivityListResponse {
 @Injectable({
   providedIn: 'root',
 })
-export class ActivityService {
-  private http = inject(HttpClient);
-  private apiUrl = `${environment.apiUrl}/activities`;
-
+export class ActivityService extends BaseService {
   /**
    * Get activities for a specific project
    */
@@ -31,7 +28,9 @@ export class ActivityService {
   ): Observable<ActivityListResponse> {
     const params = new HttpParams().set('page', page.toString()).set('limit', limit.toString());
 
-    return this.http.get<ActivityListResponse>(`${this.apiUrl}/project/${projectId}`, { params });
+    return this.http.get<ActivityListResponse>(this.buildUrl(`/activities/project/${projectId}`), {
+      params,
+    });
   }
 
   /**
@@ -44,7 +43,9 @@ export class ActivityService {
   ): Observable<ActivityListResponse> {
     const params = new HttpParams().set('page', page.toString()).set('limit', limit.toString());
 
-    return this.http.get<ActivityListResponse>(`${this.apiUrl}/task/${taskId}`, { params });
+    return this.http.get<ActivityListResponse>(this.buildUrl(`/activities/task/${taskId}`), {
+      params,
+    });
   }
 
   /**
@@ -59,7 +60,9 @@ export class ActivityService {
     const params = new HttpParams().set('page', '1').set('limit', limit.toString());
 
     const endpoint =
-      type === 'project' ? `${this.apiUrl}/project/${id}` : `${this.apiUrl}/task/${id}`;
+      type === 'project'
+        ? this.buildUrl(`/activities/project/${id}`)
+        : this.buildUrl(`/activities/task/${id}`);
 
     return this.http.get<Activity[]>(endpoint, { params });
   }

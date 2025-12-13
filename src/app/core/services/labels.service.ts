@@ -1,8 +1,7 @@
-import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { environment } from '../../../environments/environment';
 import { Label } from '../models/task.model';
+import { BaseService } from './base.service';
 
 export interface CreateLabelDto {
   name: string;
@@ -17,49 +16,46 @@ export interface UpdateLabelDto {
 @Injectable({
   providedIn: 'root',
 })
-export class LabelsService {
-  private readonly http = inject(HttpClient);
-  private readonly apiUrl = `${environment.apiUrl}/labels`;
-
+export class LabelsService extends BaseService {
   /**
    * Create a new label
    */
   createLabel(dto: CreateLabelDto): Observable<Label> {
-    return this.http.post<Label>(this.apiUrl, dto);
+    return this.http.post<Label>(this.buildUrl('/labels'), dto);
   }
 
   /**
    * Get all labels
    */
   getAllLabels(): Observable<Label[]> {
-    return this.http.get<Label[]>(this.apiUrl);
+    return this.http.get<Label[]>(this.buildUrl('/labels'));
   }
 
   /**
    * Update a label
    */
   updateLabel(labelId: string, dto: UpdateLabelDto): Observable<Label> {
-    return this.http.patch<Label>(`${this.apiUrl}/${labelId}`, dto);
+    return this.http.patch<Label>(this.buildUrl(`/labels/${labelId}`), dto);
   }
 
   /**
    * Delete a label
    */
   deleteLabel(labelId: string): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${labelId}`);
+    return this.http.delete<void>(this.buildUrl(`/labels/${labelId}`));
   }
 
   /**
    * Attach a label to a task
    */
   attachLabelToTask(taskId: string, labelId: string): Observable<any> {
-    return this.http.post(`${this.apiUrl}/attach/${taskId}/${labelId}`, {});
+    return this.http.post(this.buildUrl(`/labels/attach/${taskId}/${labelId}`), {});
   }
 
   /**
    * Detach a label from a task
    */
   detachLabelFromTask(taskId: string, labelId: string): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/attach/${taskId}/${labelId}`);
+    return this.http.delete<void>(this.buildUrl(`/labels/attach/${taskId}/${labelId}`));
   }
 }

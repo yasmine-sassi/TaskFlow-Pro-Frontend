@@ -1,8 +1,7 @@
-import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { environment } from '../../../environments/environment';
 import { Attachment } from '../models/task.model';
+import { BaseService } from './base.service';
 
 export interface CreateAttachmentDto {
   taskId: string;
@@ -15,29 +14,26 @@ export interface CreateAttachmentDto {
 @Injectable({
   providedIn: 'root',
 })
-export class AttachmentsService {
-  private readonly http = inject(HttpClient);
-  private readonly apiUrl = `${environment.apiUrl}/attachments`;
-
+export class AttachmentsService extends BaseService {
   /**
    * Add attachment metadata to a task
    * Note: Actual file upload should be handled separately (e.g., to cloud storage)
    */
   createAttachment(dto: CreateAttachmentDto): Observable<Attachment> {
-    return this.http.post<Attachment>(this.apiUrl, dto);
+    return this.http.post<Attachment>(this.buildUrl('/attachments'), dto);
   }
 
   /**
    * Get all attachments for a task
    */
   getAttachmentsByTask(taskId: string): Observable<Attachment[]> {
-    return this.http.get<Attachment[]>(`${this.apiUrl}/task/${taskId}`);
+    return this.http.get<Attachment[]>(this.buildUrl(`/attachments/task/${taskId}`));
   }
 
   /**
    * Delete an attachment
    */
   deleteAttachment(attachmentId: string): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${attachmentId}`);
+    return this.http.delete<void>(this.buildUrl(`/attachments/${attachmentId}`));
   }
 }

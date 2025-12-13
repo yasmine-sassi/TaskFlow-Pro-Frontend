@@ -1,17 +1,14 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 import { User, UserRole, AuthResponse, LoginDto, RegisterDto } from '../models/user.model';
-import { environment } from '../../../environments/environment';
+import { BaseService } from './base.service';
 
 @Injectable({
   providedIn: 'root',
 })
-export class AuthService {
-  private http = inject(HttpClient);
+export class AuthService extends BaseService {
   private router = inject(Router);
-  private apiUrl = `${environment.apiUrl}/auth`;
 
   private currentUserSubject = new BehaviorSubject<User | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
@@ -22,6 +19,7 @@ export class AuthService {
   isAdmin = computed(() => this.currentUserSignal()?.role === UserRole.ADMIN);
 
   constructor() {
+    super();
     this.loadUserFromStorage();
   }
 
@@ -38,7 +36,7 @@ export class AuthService {
    * Register a new user
    */
   register(dto: RegisterDto): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.apiUrl}/register`, dto).pipe(
+    return this.http.post<AuthResponse>(this.buildUrl('/auth/register'), dto).pipe(
       tap((response) => {
         this.handleAuthSuccess(response);
       })
@@ -50,7 +48,7 @@ export class AuthService {
    */
   login(email: string, password: string): Observable<AuthResponse> {
     const loginDto: LoginDto = { email, password };
-    return this.http.post<AuthResponse>(`${this.apiUrl}/login`, loginDto).pipe(
+    return this.http.post<AuthResponse>(this.buildUrl('/auth/login'), loginDto).pipe(
       tap((response) => {
         this.handleAuthSuccess(response);
       })
@@ -61,7 +59,7 @@ export class AuthService {
    * Get current user profile from server
    */
   me(): Observable<{ user: User }> {
-    return this.http.get<{ user: User }>(`${this.apiUrl}/me`).pipe(
+    return this.http.get<{ user: User }>(this.buildUrl('/auth/me')).pipe(
       tap((response) => {
         this.setCurrentUser(response.user);
       })
@@ -72,7 +70,7 @@ export class AuthService {
    * Logout user
    */
   logout(): Observable<{ message: string }> {
-    return this.http.post<{ message: string }>(`${this.apiUrl}/logout`, {}).pipe(
+    return this.http.post<{ message: string }>(this.buildUrl('/auth/logout'), {}).pipe(
       tap(() => {
         this.clearAuthData();
         this.router.navigate(['/auth/login']);

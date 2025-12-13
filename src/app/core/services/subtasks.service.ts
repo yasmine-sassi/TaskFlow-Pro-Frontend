@@ -1,8 +1,7 @@
-import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { environment } from '../../../environments/environment';
 import { Subtask } from '../models/task.model';
+import { BaseService } from './base.service';
 
 export interface CreateSubtaskDto {
   taskId: string;
@@ -19,42 +18,39 @@ export interface UpdateSubtaskDto {
 @Injectable({
   providedIn: 'root',
 })
-export class SubtasksService {
-  private readonly http = inject(HttpClient);
-  private readonly apiUrl = `${environment.apiUrl}/subtasks`;
-
+export class SubtasksService extends BaseService {
   /**
    * Create a new subtask
    */
   createSubtask(dto: CreateSubtaskDto): Observable<Subtask> {
-    return this.http.post<Subtask>(this.apiUrl, dto);
+    return this.http.post<Subtask>(this.buildUrl('/subtasks'), dto);
   }
 
   /**
    * Get all subtasks for a task
    */
   getSubtasksByTask(taskId: string): Observable<Subtask[]> {
-    return this.http.get<Subtask[]>(`${this.apiUrl}/task/${taskId}`);
+    return this.http.get<Subtask[]>(this.buildUrl(`/subtasks/task/${taskId}`));
   }
 
   /**
    * Update a subtask
    */
   updateSubtask(subtaskId: string, dto: UpdateSubtaskDto): Observable<Subtask> {
-    return this.http.patch<Subtask>(`${this.apiUrl}/${subtaskId}`, dto);
+    return this.http.patch<Subtask>(this.buildUrl(`/subtasks/${subtaskId}`), dto);
   }
 
   /**
    * Toggle subtask completion
    */
   toggleComplete(subtaskId: string, isComplete: boolean): Observable<Subtask> {
-    return this.http.patch<Subtask>(`${this.apiUrl}/${subtaskId}`, { isComplete });
+    return this.http.patch<Subtask>(this.buildUrl(`/subtasks/${subtaskId}`), { isComplete });
   }
 
   /**
    * Delete a subtask
    */
   deleteSubtask(subtaskId: string): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${subtaskId}`);
+    return this.http.delete<void>(this.buildUrl(`/subtasks/${subtaskId}`));
   }
 }

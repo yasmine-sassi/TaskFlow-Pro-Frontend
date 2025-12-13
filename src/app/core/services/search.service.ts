@@ -1,8 +1,8 @@
-import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { Injectable } from '@angular/core';
+import { HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { environment } from '../../../environments/environment';
 import { Task, Comment } from '../models/task.model';
+import { BaseService } from './base.service';
 
 export interface SearchTasksParams {
   q?: string; // Search query
@@ -21,10 +21,7 @@ export interface SearchCommentsParams {
 @Injectable({
   providedIn: 'root',
 })
-export class SearchService {
-  private readonly http = inject(HttpClient);
-  private readonly apiUrl = `${environment.apiUrl}/search`;
-
+export class SearchService extends BaseService {
   /**
    * Search tasks across all accessible projects
    */
@@ -37,7 +34,7 @@ export class SearchService {
     if (params.priority) httpParams = httpParams.set('priority', params.priority);
     if (params.assignedToMe) httpParams = httpParams.set('assignedToMe', 'true');
 
-    return this.http.get<Task[]>(`${this.apiUrl}/tasks`, { params: httpParams });
+    return this.http.get<Task[]>(this.buildUrl('/search/tasks'), { params: httpParams });
   }
 
   /**
@@ -50,6 +47,6 @@ export class SearchService {
     if (params.projectId) httpParams = httpParams.set('projectId', params.projectId);
     if (params.taskId) httpParams = httpParams.set('taskId', params.taskId);
 
-    return this.http.get<Comment[]>(`${this.apiUrl}/comments`, { params: httpParams });
+    return this.http.get<Comment[]>(this.buildUrl('/search/comments'), { params: httpParams });
   }
 }

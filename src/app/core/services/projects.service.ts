@@ -1,8 +1,7 @@
-import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { environment } from '../../../environments/environment';
 import { Project, ProjectMember, ProjectMemberRole } from '../models/project.model';
+import { BaseService } from './base.service';
 
 export interface CreateProjectDto {
   name: string;
@@ -30,50 +29,47 @@ export interface UpdateMemberDto {
 @Injectable({
   providedIn: 'root',
 })
-export class ProjectsService {
-  private readonly http = inject(HttpClient);
-  private readonly apiUrl = `${environment.apiUrl}/projects`;
-
+export class ProjectsService extends BaseService {
   /**
    * Create a new project
    */
   createProject(dto: CreateProjectDto): Observable<Project> {
-    return this.http.post<Project>(this.apiUrl, dto);
+    return this.http.post<Project>(this.buildUrl('/projects'), dto);
   }
 
   /**
    * Get all projects accessible to current user
    */
   getAllProjects(): Observable<Project[]> {
-    return this.http.get<Project[]>(this.apiUrl);
+    return this.http.get<Project[]>(this.buildUrl('/projects'));
   }
 
   /**
    * Get a single project by ID
    */
   getProjectById(projectId: string): Observable<Project> {
-    return this.http.get<Project>(`${this.apiUrl}/${projectId}`);
+    return this.http.get<Project>(this.buildUrl(`/projects/${projectId}`));
   }
 
   /**
    * Update a project (owner only)
    */
   updateProject(projectId: string, dto: UpdateProjectDto): Observable<Project> {
-    return this.http.patch<Project>(`${this.apiUrl}/${projectId}`, dto);
+    return this.http.patch<Project>(this.buildUrl(`/projects/${projectId}`), dto);
   }
 
   /**
    * Delete a project (owner only)
    */
   deleteProject(projectId: string): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${projectId}`);
+    return this.http.delete<void>(this.buildUrl(`/projects/${projectId}`));
   }
 
   /**
    * Archive/Unarchive a project
    */
   toggleArchive(projectId: string, isArchived: boolean): Observable<Project> {
-    return this.http.patch<Project>(`${this.apiUrl}/${projectId}`, { isArchived });
+    return this.http.patch<Project>(this.buildUrl(`/projects/${projectId}`), { isArchived });
   }
 
   // ============================================
@@ -84,14 +80,14 @@ export class ProjectsService {
    * Get all members of a project
    */
   getProjectMembers(projectId: string): Observable<ProjectMember[]> {
-    return this.http.get<ProjectMember[]>(`${this.apiUrl}/${projectId}/members`);
+    return this.http.get<ProjectMember[]>(this.buildUrl(`/projects/${projectId}/members`));
   }
 
   /**
    * Add a member to the project (owner only)
    */
   addMember(projectId: string, dto: AddMemberDto): Observable<ProjectMember> {
-    return this.http.post<ProjectMember>(`${this.apiUrl}/${projectId}/members`, dto);
+    return this.http.post<ProjectMember>(this.buildUrl(`/projects/${projectId}/members`), dto);
   }
 
   /**
@@ -102,14 +98,17 @@ export class ProjectsService {
     memberId: string,
     dto: UpdateMemberDto
   ): Observable<ProjectMember> {
-    return this.http.patch<ProjectMember>(`${this.apiUrl}/${projectId}/members/${memberId}`, dto);
+    return this.http.patch<ProjectMember>(
+      this.buildUrl(`/projects/${projectId}/members/${memberId}`),
+      dto
+    );
   }
 
   /**
    * Remove a member from the project (owner only)
    */
   removeMember(projectId: string, memberId: string): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${projectId}/members/${memberId}`);
+    return this.http.delete<void>(this.buildUrl(`/projects/${projectId}/members/${memberId}`));
   }
 
   /**
