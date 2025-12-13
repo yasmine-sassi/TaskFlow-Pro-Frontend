@@ -1,19 +1,16 @@
-export enum ActivityType {
-  TASK_CREATED = 'TASK_CREATED',
-  TASK_UPDATED = 'TASK_UPDATED',
-  TASK_DELETED = 'TASK_DELETED',
-  TASK_MOVED = 'TASK_MOVED',
-  COMMENT_ADDED = 'COMMENT_ADDED',
-  USER_ASSIGNED = 'USER_ASSIGNED',
-}
+import { User } from './user.model';
 
 export interface Activity {
   id: string;
-  type: ActivityType;
-  userId: string;
-  userName: string;
+  action: string;
+  entity: string;
+  entityId: string;
+  metadata?: any;
+  userId?: string;
+  projectId?: string;
   taskId?: string;
-  taskTitle?: string;
-  details: string;
-  timestamp: Date;
+  createdAt: Date;
+
+  // Relations
+  user?: User;
 }
