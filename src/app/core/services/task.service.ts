@@ -104,44 +104,17 @@ export class TasksService {
     return this.updateTask(taskId, { status: newStatus });
   }
 
-  addComment(
-    taskId: string,
-    content: string,
-    userId: string,
-    userName: string
-  ): Observable<Comment> {
-    const comment: Comment = {
-      id: this.generateId(),
-      taskId,
-      userId,
-      userName,
-      content,
-      createdAt: new Date(),
-    };
-
-    const tasks = this.tasksSignal();
-    const taskIndex = tasks.findIndex((t) => t.id === taskId);
-
-    if (taskIndex === -1) {
-      throw new Error('Task not found');
-    }
-
-    const updatedTask = {
-      ...tasks[taskIndex],
-      comments: [...tasks[taskIndex].comments, comment],
-      updatedAt: new Date(),
-    };
-
-    const updatedTasks = [...tasks];
-    updatedTasks[taskIndex] = updatedTask;
-
-    this.tasksSignal.set(updatedTasks);
-    this.tasksSubject.next(updatedTasks);
-
-    return of(comment);
+  /**
+   * Assign a user to a task
+   */
+  assignUser(taskId: string, userId: string): Observable<Task> {
+    return this.http.post<Task>(`${this.apiUrl}/${taskId}/assign`, { userId });
   }
 
-  private generateId(): string {
-    return `task-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  /**
+   * Unassign a user from a task
+   */
+  unassignUser(taskId: string, userId: string): Observable<{ message: string }> {
+    return this.http.delete<{ message: string }>(`${this.apiUrl}/${taskId}/assign/${userId}`);
   }
 }
