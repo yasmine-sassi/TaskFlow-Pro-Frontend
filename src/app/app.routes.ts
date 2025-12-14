@@ -2,7 +2,7 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { adminGuard } from './core/guards/admin.guard';
 import { projectMemberGuard } from './core/guards/project-member.guard';
-import { projectResolver, projectsResolver, userResolver } from './core/resolvers';
+import { projectResolver, projectsResolver, tasksResolver, userResolver } from './core/resolvers';
 import { MainLayoutComponent } from './layout/main-layout/main-layout.component';
 
 export const routes: Routes = [
@@ -83,6 +83,7 @@ export const routes: Routes = [
             loadComponent: () =>
               import('./features/tasks/tasks/tasks.component').then((m) => m.TasksComponent),
             data: { title: 'My Tasks' },
+            resolve: { tasks: tasksResolver },
           },
         ],
       },

@@ -1,8 +1,9 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal, computed, effect, inject } from '@angular/core';
 import { HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, tap, catchError, throwError } from 'rxjs';
 import { Task, TaskStatus, TaskPriority } from '../models/task.model';
 import { BaseService } from './base.service';
+import { LoggerService } from './logger.service';
 
 export interface CreateTaskDto {
   title: string;
@@ -48,6 +49,82 @@ export interface TaskListResponse {
   providedIn: 'root',
 })
 export class TasksService extends BaseService {
+  private logger = inject(LoggerService);
+
+  // Signals for state management
+  tasksSignal = signal<Task[]>([]);
+  loadingSignal = signal<boolean>(false);
+  errorSignal = signal<string | null>(null);
+
+  // Filter signals
+  statusFilterSignal = signal<TaskStatus | null>(null);
+  priorityFilterSignal = signal<TaskPriority | null>(null);
+  assigneeFilterSignal = signal<string | null>(null);
+  searchFilterSignal = signal<string>('');
+
+  // Computed properties for derived states
+  filteredTasksSignal = computed(() => {
+    const tasks = this.tasksSignal();
+    const statusFilter = this.statusFilterSignal();
+    const priorityFilter = this.priorityFilterSignal();
+    const assigneeFilter = this.assigneeFilterSignal();
+    const searchFilter = this.searchFilterSignal().toLowerCase();
+
+    return tasks.filter(task => {
+      // Status filter
+      if (statusFilter && task.status !== statusFilter) {
+        return false;
+      }
+
+      // Priority filter
+      if (priorityFilter && task.priority !== priorityFilter) {
+        return false;
+      }
+
+      // Assignee filter
+      if (assigneeFilter && !task.assignees?.some(assignee => assignee.id === assigneeFilter)) {
+        return false;
+      }
+
+      // Search filter (title and description)
+      if (searchFilter) {
+        const titleMatch = task.title.toLowerCase().includes(searchFilter);
+        const descriptionMatch = task.description?.toLowerCase().includes(searchFilter) || false;
+        if (!titleMatch && !descriptionMatch) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  });
+
+  // Additional computed properties
+  todoTasks = computed(() => this.tasksSignal().filter(t => t.status === TaskStatus.TODO));
+  inProgressTasks = computed(() => this.tasksSignal().filter(t => t.status === TaskStatus.IN_PROGRESS));
+  doneTasks = computed(() => this.tasksSignal().filter(t => t.status === TaskStatus.DONE));
+  highPriorityTasks = computed(() => this.tasksSignal().filter(t => t.priority === TaskPriority.HIGH || t.priority === TaskPriority.URGENT));
+
+  constructor() {
+    super();
+    // Effects for side effects
+    effect(() => {
+      const tasks = this.tasksSignal();
+      this.logger.info(`Tasks updated: ${tasks.length} tasks loaded`);
+    });
+
+    effect(() => {
+      const filtered = this.filteredTasksSignal();
+      this.logger.info(`Filtered tasks: ${filtered.length} tasks match current filters`);
+    });
+
+    effect(() => {
+      const error = this.errorSignal();
+      if (error) {
+        this.logger.error(`Tasks error: ${error}`);
+      }
+    });
+  }
   /**
    * Create a new task
    */
@@ -137,5 +214,223 @@ export class TasksService extends BaseService {
     return this.http.delete<{ message: string }>(
       this.buildUrl(`/tasks/${taskId}/assign/${userId}`)
     );
+  }
+
+  // ============================================
+  // Signal-Based State Management Methods
+  // ============================================
+
+  /**
+   * Load tasks for a project and update signals
+   */
+  loadTasksByProject(projectId: string, filter?: FilterTaskDto): Observable<TaskListResponse> {
+    this.loadingSignal.set(true);
+    this.errorSignal.set(null);
+    return this.getTasksByProject(projectId, filter).pipe(
+      tap((response) => {
+        this.tasksSignal.set(response.data);
+        this.loadingSignal.set(false);
+      }),
+      catchError((error) => {
+        this.errorSignal.set(error.message || 'Failed to load tasks');
+        this.loadingSignal.set(false);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  /**
+   * Load user's assigned tasks and update signals
+   */
+  loadMyTasks(filter?: FilterTaskDto): Observable<TaskListResponse> {
+    this.loadingSignal.set(true);
+    this.errorSignal.set(null);
+    return this.getMyTasks(filter).pipe(
+      tap((response) => {
+        this.tasksSignal.set(response.data);
+        this.loadingSignal.set(false);
+      }),
+      catchError((error) => {
+        this.errorSignal.set(error.message || 'Failed to load my tasks');
+        this.loadingSignal.set(false);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  /**
+   * Create a new task and update signals
+   */
+  createTaskWithSignal(dto: CreateTaskDto): Observable<Task> {
+    this.loadingSignal.set(true);
+    this.errorSignal.set(null);
+    return this.createTask(dto).pipe(
+      tap((newTask) => {
+        this.tasksSignal.update(tasks => [...tasks, newTask]);
+        this.loadingSignal.set(false);
+      }),
+      catchError((error) => {
+        this.errorSignal.set(error.message || 'Failed to create task');
+        this.loadingSignal.set(false);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  /**
+   * Update a task and update signals
+   */
+  updateTaskWithSignal(id: string, dto: UpdateTaskDto): Observable<Task> {
+    this.loadingSignal.set(true);
+    this.errorSignal.set(null);
+    return this.updateTask(id, dto).pipe(
+      tap((updatedTask) => {
+        this.tasksSignal.update(tasks =>
+          tasks.map(t => t.id === id ? updatedTask : t)
+        );
+        this.loadingSignal.set(false);
+      }),
+      catchError((error) => {
+        this.errorSignal.set(error.message || 'Failed to update task');
+        this.loadingSignal.set(false);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  /**
+   * Delete a task and update signals
+   */
+  deleteTaskWithSignal(id: string): Observable<{ message: string }> {
+    this.loadingSignal.set(true);
+    this.errorSignal.set(null);
+    return this.deleteTask(id).pipe(
+      tap(() => {
+        this.tasksSignal.update(tasks => tasks.filter(t => t.id !== id));
+        this.loadingSignal.set(false);
+      }),
+      catchError((error) => {
+        this.errorSignal.set(error.message || 'Failed to delete task');
+        this.loadingSignal.set(false);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  /**
+   * Move task to different status and update signals
+   */
+  moveTaskWithSignal(taskId: string, newStatus: TaskStatus): Observable<Task> {
+    return this.updateTaskWithSignal(taskId, { status: newStatus });
+  }
+
+  /**
+   * Assign user to task and update signals
+   */
+  assignUserWithSignal(taskId: string, userId: string): Observable<Task> {
+    this.loadingSignal.set(true);
+    this.errorSignal.set(null);
+    return this.assignUser(taskId, userId).pipe(
+      tap((updatedTask) => {
+        this.tasksSignal.update(tasks =>
+          tasks.map(t => t.id === taskId ? updatedTask : t)
+        );
+        this.loadingSignal.set(false);
+      }),
+      catchError((error) => {
+        this.errorSignal.set(error.message || 'Failed to assign user');
+        this.loadingSignal.set(false);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  /**
+   * Unassign user from task and update signals
+   */
+  unassignUserWithSignal(taskId: string, userId: string): Observable<{ message: string }> {
+    this.loadingSignal.set(true);
+    this.errorSignal.set(null);
+    return this.unassignUser(taskId, userId).pipe(
+      tap(() => {
+        // Update the task in signals by removing the assignee
+        this.tasksSignal.update(tasks =>
+          tasks.map(task => {
+            if (task.id === taskId) {
+              return {
+                ...task,
+                assignees: task.assignees?.filter(assignee => assignee.id !== userId) || []
+              };
+            }
+            return task;
+          })
+        );
+        this.loadingSignal.set(false);
+      }),
+      catchError((error) => {
+        this.errorSignal.set(error.message || 'Failed to unassign user');
+        this.loadingSignal.set(false);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  // ============================================
+  // Filter Management Methods
+  // ============================================
+
+  /**
+   * Set status filter
+   */
+  setStatusFilter(status: TaskStatus | null): void {
+    this.statusFilterSignal.set(status);
+  }
+
+  /**
+   * Set priority filter
+   */
+  setPriorityFilter(priority: TaskPriority | null): void {
+    this.priorityFilterSignal.set(priority);
+  }
+
+  /**
+   * Set assignee filter
+   */
+  setAssigneeFilter(assigneeId: string | null): void {
+    this.assigneeFilterSignal.set(assigneeId);
+  }
+
+  /**
+   * Set search filter
+   */
+  setSearchFilter(search: string): void {
+    this.searchFilterSignal.set(search);
+  }
+
+  /**
+   * Clear all filters
+   */
+  clearFilters(): void {
+    this.statusFilterSignal.set(null);
+    this.priorityFilterSignal.set(null);
+    this.assigneeFilterSignal.set(null);
+    this.searchFilterSignal.set('');
+  }
+
+  /**
+   * Clear error state
+   */
+  clearError(): void {
+    this.errorSignal.set(null);
+  }
+
+  /**
+   * Reset all signals
+   */
+  resetState(): void {
+    this.tasksSignal.set([]);
+    this.loadingSignal.set(false);
+    this.errorSignal.set(null);
+    this.clearFilters();
   }
 }
