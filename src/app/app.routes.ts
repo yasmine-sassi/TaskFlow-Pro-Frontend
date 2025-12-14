@@ -142,16 +142,13 @@ export const routes: Routes = [
   // ============================================
   {
     path: '',
-    redirectTo: 'projects',
+    redirectTo: 'dashboard',
     pathMatch: 'full',
   },
-  // TODO: Create not-found component in shared/pages
-  // {
-  //   path: '**',
-  //   loadComponent: () =>
-  //     import('./shared/pages/not-found/not-found.component').then(
-  //       (m) => m.NotFoundComponent
-  //     ),
-  //   data: { title: 'Page Not Found' },
-  // },
+  {
+    path: '**',
+    loadComponent: () =>
+      import('./features/not-found/not-found.component').then((m) => m.NotFoundComponent),
+    data: { title: 'Page Not Found' },
+  },
 ];
