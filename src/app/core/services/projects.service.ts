@@ -1,5 +1,6 @@
-import { Injectable, signal, computed, effect, inject } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Observable, tap, catchError, throwError } from 'rxjs';
+import { shareReplay } from 'rxjs/operators';
 import { Project, ProjectMember, ProjectMemberRole } from '../models/project.model';
 import { BaseService } from './base.service';
 import { LoggerService } from './logger.service';
@@ -33,96 +34,175 @@ export interface UpdateMemberDto {
 export class ProjectsService extends BaseService {
   private logger = inject(LoggerService);
 
-  // Signals for state management
-  projectsSignal = signal<Project[]>([]);
-  currentProjectSignal = signal<Project | null>(null);
-  selectedProjectMembersSignal = signal<ProjectMember[]>([]);
-  loadingSignal = signal<boolean>(false);
-  errorSignal = signal<string | null>(null);
+  // ============================================
+  // RxJS Cache Storage Only
+  // ============================================
+  private allProjectsCache$: Observable<Project[]> | null = null;
+  private projectCache = new Map<string, Observable<Project>>();
+  private projectMembersCache = new Map<string, Observable<ProjectMember[]>>();
 
-  // Computed properties for derived states
-  activeProjects = computed(() => this.projectsSignal().filter(p => !p.isArchived));
-  archivedProjects = computed(() => this.projectsSignal().filter(p => p.isArchived));
-  currentProjectMembers = computed(() => this.selectedProjectMembersSignal());
-  hasActiveProjects = computed(() => this.activeProjects().length > 0);
+  // ============================================
+  // Project CRUD Operations with Cache Invalidation
+  // ============================================
 
-  constructor() {
-    super();
-    // Effects for side effects
-    effect(() => {
-      const projects = this.projectsSignal();
-      this.logger.info(`Projects updated: ${projects.length} projects loaded`);
-    });
-
-    effect(() => {
-      const error = this.errorSignal();
-      if (error) {
-        this.logger.error(`Projects error: ${error}`);
-      }
-    });
-  }
   /**
-   * Create a new project
+   * Create a new project with cache invalidation
    */
   createProject(dto: CreateProjectDto): Observable<Project> {
-    return this.http.post<Project>(this.buildUrl('/projects'), dto);
+    return this.http.post<Project>(this.buildUrl('/projects'), dto).pipe(
+      tap(() => {
+        this.invalidateAllProjectsCache();
+        this.logger.info('Project created, cache invalidated');
+      }),
+      catchError((error) => {
+        this.logger.error('Failed to create project: ' + error.message);
+        return throwError(() => error);
+      })
+    );
   }
 
   /**
-   * Get all projects accessible to current user
+   * Get all projects with RxJS caching (shareReplay)
    */
   getAllProjects(): Observable<Project[]> {
-    return this.http.get<Project[]>(this.buildUrl('/projects'));
+    if (!this.allProjectsCache$) {
+      this.logger.info('Fetching all projects from API');
+      this.allProjectsCache$ = this.http.get<Project[]>(this.buildUrl('/projects')).pipe(
+        tap(() => this.logger.info('Projects cached')),
+        shareReplay(1),
+        catchError((error) => {
+          this.allProjectsCache$ = null; // Invalidate on error
+          return throwError(() => error);
+        })
+      );
+    } else {
+      this.logger.info('Using cached projects');
+    }
+    return this.allProjectsCache$;
   }
 
   /**
-   * Get a single project by ID
+   * Get a single project by ID with RxJS caching
    */
   getProjectById(projectId: string): Observable<Project> {
-    return this.http.get<Project>(this.buildUrl(`/projects/${projectId}`));
+    if (!this.projectCache.has(projectId)) {
+      this.logger.info(`Fetching project ${projectId} from API`);
+      this.projectCache.set(
+        projectId,
+        this.http.get<Project>(this.buildUrl(`/projects/${projectId}`)).pipe(
+          tap(() => this.logger.info(`Project ${projectId} cached`)),
+          shareReplay(1),
+          catchError((error) => {
+            this.projectCache.delete(projectId);
+            return throwError(() => error);
+          })
+        )
+      );
+    } else {
+      this.logger.info(`Using cached project ${projectId}`);
+    }
+    return this.projectCache.get(projectId)!;
   }
 
   /**
-   * Update a project (owner only)
+   * Update a project with cache invalidation
    */
   updateProject(projectId: string, dto: UpdateProjectDto): Observable<Project> {
-    return this.http.patch<Project>(this.buildUrl(`/projects/${projectId}`), dto);
+    return this.http.patch<Project>(this.buildUrl(`/projects/${projectId}`), dto).pipe(
+      tap(() => {
+        this.invalidateProjectCache(projectId);
+        this.invalidateAllProjectsCache();
+        this.logger.info(`Project ${projectId} updated, cache invalidated`);
+      }),
+      catchError((error) => {
+        this.logger.error('Failed to update project: ' + error.message);
+        return throwError(() => error);
+      })
+    );
   }
 
   /**
-   * Delete a project (owner only)
+   * Delete a project with cache invalidation
    */
   deleteProject(projectId: string): Observable<void> {
-    return this.http.delete<void>(this.buildUrl(`/projects/${projectId}`));
+    return this.http.delete<void>(this.buildUrl(`/projects/${projectId}`)).pipe(
+      tap(() => {
+        this.invalidateProjectCache(projectId);
+        this.invalidateAllProjectsCache();
+        this.invalidateProjectMembersCache(projectId);
+        this.logger.info(`Project ${projectId} deleted, caches invalidated`);
+      }),
+      catchError((error) => {
+        this.logger.error('Failed to delete project: ' + error.message);
+        return throwError(() => error);
+      })
+    );
   }
 
   /**
-   * Archive/Unarchive a project
+   * Archive/Unarchive a project with cache invalidation
    */
   toggleArchive(projectId: string, isArchived: boolean): Observable<Project> {
-    return this.http.patch<Project>(this.buildUrl(`/projects/${projectId}`), { isArchived });
+    return this.http.patch<Project>(this.buildUrl(`/projects/${projectId}`), { isArchived }).pipe(
+      tap(() => {
+        this.invalidateProjectCache(projectId);
+        this.invalidateAllProjectsCache();
+        this.logger.info(`Project ${projectId} archive toggled, cache invalidated`);
+      }),
+      catchError((error) => {
+        this.logger.error('Failed to toggle archive: ' + error.message);
+        return throwError(() => error);
+      })
+    );
   }
 
   // ============================================
-  // Project Members Management
+  // Project Members Management with Cache Invalidation
   // ============================================
 
   /**
-   * Get all members of a project
+   * Get all members of a project with RxJS caching
    */
   getProjectMembers(projectId: string): Observable<ProjectMember[]> {
-    return this.http.get<ProjectMember[]>(this.buildUrl(`/projects/${projectId}/members`));
+    if (!this.projectMembersCache.has(projectId)) {
+      this.logger.info(`Fetching members for project ${projectId} from API`);
+      this.projectMembersCache.set(
+        projectId,
+        this.http.get<ProjectMember[]>(this.buildUrl(`/projects/${projectId}/members`)).pipe(
+          tap(() => this.logger.info(`Members for project ${projectId} cached`)),
+          shareReplay(1),
+          catchError((error) => {
+            this.projectMembersCache.delete(projectId);
+            return throwError(() => error);
+          })
+        )
+      );
+    } else {
+      this.logger.info(`Using cached members for project ${projectId}`);
+    }
+    return this.projectMembersCache.get(projectId)!;
   }
 
   /**
-   * Add a member to the project (owner only)
+   * Add a member to the project with cache invalidation
    */
   addMember(projectId: string, dto: AddMemberDto): Observable<ProjectMember> {
-    return this.http.post<ProjectMember>(this.buildUrl(`/projects/${projectId}/members`), dto);
+    return this.http.post<ProjectMember>(this.buildUrl(`/projects/${projectId}/members`), dto).pipe(
+      tap(() => {
+        this.invalidateProjectMembersCache(projectId);
+        this.invalidateProjectCache(projectId);
+        this.invalidateAllProjectsCache();
+        this.logger.info(`Member added to project ${projectId}, cache invalidated`);
+      }),
+      catchError((error) => {
+        this.logger.error('Failed to add member: ' + error.message);
+        return throwError(() => error);
+      })
+    );
   }
 
   /**
-   * Update member role (owner only)
+   * Update member role with cache invalidation
    */
   updateMemberRole(
     projectId: string,
@@ -132,15 +212,39 @@ export class ProjectsService extends BaseService {
     return this.http.patch<ProjectMember>(
       this.buildUrl(`/projects/${projectId}/members/${memberId}`),
       dto
+    ).pipe(
+      tap(() => {
+        this.invalidateProjectMembersCache(projectId);
+        this.logger.info(`Member ${memberId} role updated, cache invalidated`);
+      }),
+      catchError((error) => {
+        this.logger.error('Failed to update member role: ' + error.message);
+        return throwError(() => error);
+      })
     );
   }
 
   /**
-   * Remove a member from the project (owner only)
+   * Remove a member from the project with cache invalidation
    */
   removeMember(projectId: string, memberId: string): Observable<void> {
-    return this.http.delete<void>(this.buildUrl(`/projects/${projectId}/members/${memberId}`));
+    return this.http.delete<void>(this.buildUrl(`/projects/${projectId}/members/${memberId}`)).pipe(
+      tap(() => {
+        this.invalidateProjectMembersCache(projectId);
+        this.invalidateProjectCache(projectId);
+        this.invalidateAllProjectsCache();
+        this.logger.info(`Member ${memberId} removed, cache invalidated`);
+      }),
+      catchError((error) => {
+        this.logger.error('Failed to remove member: ' + error.message);
+        return throwError(() => error);
+      })
+    );
   }
+
+  // ============================================
+  // Permission Checks
+  // ============================================
 
   /**
    * Check if current user is project owner
@@ -172,166 +276,37 @@ export class ProjectsService extends BaseService {
   }
 
   // ============================================
-  // Signal-Based State Management Methods
+  // Cache Invalidation Methods (Private)
   // ============================================
 
   /**
-   * Load all projects and update signals
+   * Invalidate all projects cache
    */
-  loadProjects(): Observable<Project[]> {
-    this.loadingSignal.set(true);
-    this.errorSignal.set(null);
-    return this.getAllProjects().pipe(
-      tap((projects) => {
-        this.projectsSignal.set(projects);
-        this.loadingSignal.set(false);
-      }),
-      catchError((error) => {
-        this.errorSignal.set(error.message || 'Failed to load projects');
-        this.loadingSignal.set(false);
-        return throwError(() => error);
-      })
-    );
+  private invalidateAllProjectsCache(): void {
+    this.allProjectsCache$ = null;
   }
 
   /**
-   * Set the current selected project
+   * Invalidate specific project cache
    */
-  setCurrentProject(projectId: string | null): void {
-    if (projectId) {
-      const project = this.projectsSignal().find(p => p.id === projectId);
-      this.currentProjectSignal.set(project || null);
-      if (project) {
-        this.loadProjectMembers(projectId);
-      } else {
-        this.selectedProjectMembersSignal.set([]);
-      }
-    } else {
-      this.currentProjectSignal.set(null);
-      this.selectedProjectMembersSignal.set([]);
-    }
+  private invalidateProjectCache(projectId: string): void {
+    this.projectCache.delete(projectId);
   }
 
   /**
-   * Load members for the selected project
+   * Invalidate members cache for a specific project
    */
-  loadProjectMembers(projectId: string): Observable<ProjectMember[]> {
-    return this.getProjectMembers(projectId).pipe(
-      tap((members) => {
-        this.selectedProjectMembersSignal.set(members);
-      }),
-      catchError((error) => {
-        this.errorSignal.set(error.message || 'Failed to load project members');
-        return throwError(() => error);
-      })
-    );
+  private invalidateProjectMembersCache(projectId: string): void {
+    this.projectMembersCache.delete(projectId);
   }
 
   /**
-   * Create a new project and update signals
+   * Clear all caches (call on logout)
    */
-  createProjectWithSignal(dto: CreateProjectDto): Observable<Project> {
-    this.loadingSignal.set(true);
-    this.errorSignal.set(null);
-    return this.createProject(dto).pipe(
-      tap((newProject) => {
-        this.projectsSignal.update(projects => [...projects, newProject]);
-        this.loadingSignal.set(false);
-      }),
-      catchError((error) => {
-        this.errorSignal.set(error.message || 'Failed to create project');
-        this.loadingSignal.set(false);
-        return throwError(() => error);
-      })
-    );
-  }
-
-  /**
-   * Update a project and update signals
-   */
-  updateProjectWithSignal(projectId: string, dto: UpdateProjectDto): Observable<Project> {
-    this.loadingSignal.set(true);
-    this.errorSignal.set(null);
-    return this.updateProject(projectId, dto).pipe(
-      tap((updatedProject) => {
-        this.projectsSignal.update(projects =>
-          projects.map(p => p.id === projectId ? updatedProject : p)
-        );
-        if (this.currentProjectSignal()?.id === projectId) {
-          this.currentProjectSignal.set(updatedProject);
-        }
-        this.loadingSignal.set(false);
-      }),
-      catchError((error) => {
-        this.errorSignal.set(error.message || 'Failed to update project');
-        this.loadingSignal.set(false);
-        return throwError(() => error);
-      })
-    );
-  }
-
-  /**
-   * Delete a project and update signals
-   */
-  deleteProjectWithSignal(projectId: string): Observable<void> {
-    this.loadingSignal.set(true);
-    this.errorSignal.set(null);
-    return this.deleteProject(projectId).pipe(
-      tap(() => {
-        this.projectsSignal.update(projects => projects.filter(p => p.id !== projectId));
-        if (this.currentProjectSignal()?.id === projectId) {
-          this.currentProjectSignal.set(null);
-          this.selectedProjectMembersSignal.set([]);
-        }
-        this.loadingSignal.set(false);
-      }),
-      catchError((error) => {
-        this.errorSignal.set(error.message || 'Failed to delete project');
-        this.loadingSignal.set(false);
-        return throwError(() => error);
-      })
-    );
-  }
-
-  /**
-   * Toggle archive status and update signals
-   */
-  toggleArchiveWithSignal(projectId: string, isArchived: boolean): Observable<Project> {
-    this.loadingSignal.set(true);
-    this.errorSignal.set(null);
-    return this.toggleArchive(projectId, isArchived).pipe(
-      tap((updatedProject) => {
-        this.projectsSignal.update(projects =>
-          projects.map(p => p.id === projectId ? updatedProject : p)
-        );
-        if (this.currentProjectSignal()?.id === projectId) {
-          this.currentProjectSignal.set(updatedProject);
-        }
-        this.loadingSignal.set(false);
-      }),
-      catchError((error) => {
-        this.errorSignal.set(error.message || 'Failed to toggle archive status');
-        this.loadingSignal.set(false);
-        return throwError(() => error);
-      })
-    );
-  }
-
-  /**
-   * Clear error state
-   */
-  clearError(): void {
-    this.errorSignal.set(null);
-  }
-
-  /**
-   * Reset all signals
-   */
-  resetState(): void {
-    this.projectsSignal.set([]);
-    this.currentProjectSignal.set(null);
-    this.selectedProjectMembersSignal.set([]);
-    this.loadingSignal.set(false);
-    this.errorSignal.set(null);
+  clearCache(): void {
+    this.allProjectsCache$ = null;
+    this.projectCache.clear();
+    this.projectMembersCache.clear();
+    this.logger.info('All project caches cleared');
   }
 }
