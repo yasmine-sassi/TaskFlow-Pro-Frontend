@@ -4,6 +4,7 @@ import { Observable, tap, catchError, throwError } from 'rxjs';
 import { Task, TaskStatus, TaskPriority } from '../models/task.model';
 import { BaseService } from './base.service';
 import { LoggerService } from './logger.service';
+import { UsersService } from './users.service';
 
 export interface CreateTaskDto {
   title: string;
@@ -50,6 +51,7 @@ export interface TaskListResponse {
 })
 export class TasksService extends BaseService {
   private logger = inject(LoggerService);
+  private usersService = inject(UsersService);
 
   // Signals for state management
   tasksSignal = signal<Task[]>([]);
@@ -104,6 +106,34 @@ export class TasksService extends BaseService {
   inProgressTasks = computed(() => this.tasksSignal().filter(t => t.status === TaskStatus.IN_PROGRESS));
   doneTasks = computed(() => this.tasksSignal().filter(t => t.status === TaskStatus.DONE));
   highPriorityTasks = computed(() => this.tasksSignal().filter(t => t.priority === TaskPriority.HIGH || t.priority === TaskPriority.URGENT));
+
+  // Required computed signals
+  tasksGroupedByStatus = computed(() => {
+    const tasks = this.tasksSignal();
+    return {
+      [TaskStatus.TODO]: tasks.filter(t => t.status === TaskStatus.TODO),
+      [TaskStatus.IN_PROGRESS]: tasks.filter(t => t.status === TaskStatus.IN_PROGRESS),
+      [TaskStatus.IN_REVIEW]: tasks.filter(t => t.status === TaskStatus.IN_REVIEW),
+      [TaskStatus.DONE]: tasks.filter(t => t.status === TaskStatus.DONE),
+    };
+  });
+
+  userTasksCount = computed(() => {
+    const currentUser = this.usersService.currentUserSignal();
+    if (!currentUser) return 0;
+    return this.tasksSignal().filter(task =>
+      task.assignees?.some(assignee => assignee.id === currentUser.id)
+    ).length;
+  });
+
+  overdueTasks = computed(() => {
+    const now = new Date();
+    return this.tasksSignal().filter(task => {
+      if (!task.dueDate) return false;
+      const dueDate = new Date(task.dueDate);
+      return dueDate < now && task.status !== TaskStatus.DONE;
+    });
+  });
 
   constructor() {
     super();

@@ -45,6 +45,7 @@ export class ProjectsService extends BaseService {
   archivedProjects = computed(() => this.projectsSignal().filter(p => p.isArchived));
   currentProjectMembers = computed(() => this.selectedProjectMembersSignal());
   hasActiveProjects = computed(() => this.activeProjects().length > 0);
+  activeProjectsCount = computed(() => this.activeProjects().length);
 
   constructor() {
     super();
