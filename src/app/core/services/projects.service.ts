@@ -1,5 +1,5 @@
 import { Injectable, signal, computed, effect, inject } from '@angular/core';
-import { Observable, tap, catchError, throwError } from 'rxjs';
+import { Observable, tap, catchError, throwError, map } from 'rxjs';
 import { Project, ProjectMember, ProjectMemberRole } from '../models/project.model';
 import { BaseService } from './base.service';
 import { LoggerService } from './logger.service';
@@ -25,6 +25,13 @@ export interface AddMemberDto {
 
 export interface UpdateMemberDto {
   role: ProjectMemberRole;
+}
+
+export interface ApiResponse<T> {
+  statusCode: number;
+  message: string;
+  data: T;
+  timestamp: string;
 }
 
 @Injectable({
@@ -72,7 +79,9 @@ export class ProjectsService extends BaseService {
    * Get all projects accessible to current user
    */
   getAllProjects(): Observable<Project[]> {
-    return this.http.get<Project[]>(this.buildUrl('/projects'));
+    return this.http.get<ApiResponse<Project[]>>(this.buildUrl('/projects')).pipe(
+      map(response => response.data || [])
+    );
   }
 
   /**
@@ -334,4 +343,8 @@ export class ProjectsService extends BaseService {
     this.loadingSignal.set(false);
     this.errorSignal.set(null);
   }
+  
+  getProjects(): Project[] {
+  return this.projectsSignal();
+}
 }

@@ -1,0 +1,65 @@
+    <div class="space-y-3">
+      <!-- Attachments list -->
+      @if (attachments().length > 0) {
+        <div class="space-y-2">
+          @for (attachment of attachments(); track attachment.id) {
+            <div class="flex items-center gap-3 p-2 rounded-md border border-border bg-muted/50 group">
+              <div class="h-8 w-8 rounded bg-primary/10 flex items-center justify-center">
+                <svg class="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  @if (isImage(attachment.mimeType)) {
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  } @else if (isPdf(attachment.mimeType)) {
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  } @else {
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  }
+                </svg>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium truncate">{{ attachment.fileName }}</p>
+                <p class="text-xs text-muted-foreground">
+                  {{ formatFileSize(attachment.fileSize) }}
+                </p>
+              </div>
+              <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  type="button"
+                  (click)="downloadAttachment(attachment)"
+                  class="h-7 w-7 rounded hover:bg-accent flex items-center justify-center">
+                  <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  (click)="removeAttachment.emit(attachment.id)"
+                  class="h-7 w-7 rounded hover:bg-destructive/10 text-destructive flex items-center justify-center">
+                  <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Add attachment button -->
+      <div>
+        <input
+          #fileInput
+          type="file"
+          multiple
+          class="hidden"
+          (change)="onFileSelected($event)" />
+        <button
+          type="button"
+          (click)="fileInput.click()"
+          class="inline-flex items-center gap-2 rounded-lg border border-input bg-background px-3 py-2 text-sm hover:bg-accent">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+          </svg>
+          Add Attachment
+        </button>
+      </div>
+    </div>

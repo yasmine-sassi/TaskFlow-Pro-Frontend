@@ -1,0 +1,117 @@
+    <div class="space-y-2">
+      <!-- Selected labels -->
+      @if (selectedLabels().length > 0) {
+        <div class="flex flex-wrap gap-1.5">
+          @for (label of selectedLabels(); track label.id) {
+            <span
+              [style.background-color]="label.color"
+              class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium text-white pr-1">
+              {{ label.name }}
+              <button
+                type="button"
+                (click)="removeLabel(label.id)"
+                class="hover:bg-white/20 rounded p-0.5">
+                <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </span>
+          }
+        </div>
+      }
+
+      <!-- Popover trigger -->
+      <div class="relative">
+        <button
+          type="button"
+          (click)="isOpen.set(!isOpen())"
+          class="inline-flex items-center gap-2 rounded-lg border border-input bg-background px-3 py-2 text-sm hover:bg-accent">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+          </svg>
+          Add Labels
+        </button>
+
+        <!-- Popover content -->
+        @if (isOpen()) {
+          <div class="absolute top-full left-0 mt-1 w-64 rounded-lg border border-border bg-card shadow-medium p-2 z-50">
+            @if (!isCreating()) {
+              <div class="space-y-2">
+                <div class="text-xs font-medium text-muted-foreground px-2 py-1">
+                  Select labels
+                </div>
+                <div class="max-h-48 overflow-y-auto space-y-1">
+                  @for (label of availableLabels(); track label.id) {
+                    <button
+                      type="button"
+                      (click)="toggleLabel(label)"
+                      [class]="isSelected(label.id) 
+                        ? 'w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm bg-accent transition-colors'
+                        : 'w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm hover:bg-accent transition-colors'">
+                      <div
+                        class="h-3 w-3 rounded-full"
+                        [style.background-color]="label.color">
+                      </div>
+                      <span class="flex-1 text-left">{{ label.name }}</span>
+                      @if (isSelected(label.id)) {
+                        <svg class="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                      }
+                    </button>
+                  }
+                </div>
+                <button
+                  type="button"
+                  (click)="isCreating.set(true)"
+                  class="w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm hover:bg-accent transition-colors">
+                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                  </svg>
+                  Create new label
+                </button>
+              </div>
+            } @else {
+              <div class="space-y-3">
+                <div class="text-xs font-medium text-muted-foreground px-2 py-1">
+                  Create new label
+                </div>
+                <input
+                  type="text"
+                  [(ngModel)]="newLabelName"
+                  (keydown.enter)="handleCreateLabel()"
+                  placeholder="Label name"
+                  class="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+                <div class="flex flex-wrap gap-1.5">
+                  @for (color of presetColors; track color) {
+                    <button
+                      type="button"
+                      (click)="newLabelColor.set(color)"
+                      [class]="newLabelColor() === color
+                        ? 'h-6 w-6 rounded-full transition-all ring-2 ring-offset-2 ring-primary'
+                        : 'h-6 w-6 rounded-full transition-all'"
+                      [style.background-color]="color">
+                    </button>
+                  }
+                </div>
+                <div class="flex gap-2">
+                  <button
+                    type="button"
+                    (click)="isCreating.set(false)"
+                    class="flex-1 h-9 rounded-lg border border-input bg-background text-sm hover:bg-accent">
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    (click)="handleCreateLabel()"
+                    [disabled]="!newLabelName().trim()"
+                    class="flex-1 h-9 rounded-lg bg-primary text-primary-foreground text-sm hover:bg-primary/90 disabled:opacity-60">
+                    Create
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>

@@ -1,0 +1,79 @@
+<!-- comment-section.component.html -->
+<div class="space-y-3">
+  <!-- Comments list -->
+  @if (comments().length > 0) {
+    <div class="space-y-3 max-h-48 overflow-y-auto">
+      @for (comment of comments(); track comment.id) {
+        <div class="flex gap-2">
+          <div 
+            class="h-7 w-7 rounded-full flex items-center justify-center text-xs font-medium"
+            [class.bg-primary/10]="!isCurrentUser(comment.userId)"
+            [class.bg-primary/20]="isCurrentUser(comment.userId)"
+            [class.text-primary]="!isCurrentUser(comment.userId)"
+            [class.text-primary-foreground]="isCurrentUser(comment.userId)"
+          >
+            {{ getAuthorInitials(comment.userId) }}
+          </div>
+          <div class="flex-1">
+            <div class="flex items-center gap-2">
+              <span 
+                class="text-sm font-medium"
+                [class.text-primary]="isCurrentUser(comment.userId)"
+              >
+                {{ getAuthorName(comment.userId) }}
+              </span>
+              <span class="text-xs text-muted-foreground">
+                {{ comment.createdAt }}
+              </span>
+            </div>
+            <p 
+              class="text-sm text-muted-foreground mt-1" 
+              [innerHTML]="renderComment(comment.content)"
+            ></p>
+          </div>
+        </div>
+      }
+    </div>
+  } @else {
+    <p class="text-sm text-muted-foreground text-center py-4">No comments yet. Be the first to comment!</p>
+  }
+
+  <!-- Add comment -->
+  <div class="relative">
+    <textarea
+      #textareaRef
+      [ngModel]="content()"
+      (ngModelChange)="onContentChange($event)"
+      (keydown)="onKeyDown($event)"
+      placeholder="Add a comment... Use @ to mention someone"
+      rows="2"
+      class="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm pr-10 resize-none focus:outline-none focus:ring-2 focus:ring-primary">
+    </textarea>
+    <button
+      type="button"
+      (click)="handleSubmit()"
+      [disabled]="!content().trim()"
+      class="absolute right-1 bottom-1 h-8 w-8 rounded hover:bg-accent flex items-center justify-center disabled:opacity-50">
+      <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+      </svg>
+    </button>
+
+    <!-- Mentions dropdown -->
+    @if (showMentions() && filteredUsers().length > 0) {
+      <div class="absolute bottom-full left-0 mb-1 w-48 bg-card border border-border rounded-md shadow-lg z-50 overflow-hidden">
+        @for (user of filteredUsers(); track user.id) {
+          <button
+            type="button"
+            (click)="insertMention(user)"
+            class="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors">
+            <div class="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-medium">
+              {{ user.firstName.charAt(0) }}{{ user.lastName.charAt(0) }}
+            </div>
+            {{ user.firstName }} {{ user.lastName }}
+          </button>
+        }
+      </div>
+    }
+  </div>
+</div>

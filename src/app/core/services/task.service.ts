@@ -433,4 +433,8 @@ export class TasksService extends BaseService {
     this.errorSignal.set(null);
     this.clearFilters();
   }
+
+  getTasks(): Task[] {
+  return this.tasksSignal();
+}
 }

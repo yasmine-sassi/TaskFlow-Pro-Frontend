@@ -1,1 +1,20 @@
-<p>priority-badge.component works!</p>
+<span [class]="badgeClasses()">
+      @if (config().icon === 'down') {
+        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+        </svg>
+      }
+      @if (config().icon === 'right') {
+        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+        </svg>
+      }
+      @if (config().icon === 'up') {
+        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+        </svg>
+      }
+      @if (showLabel()) {
+        <span>{{ config().label }}</span>
+      }
+</span>
