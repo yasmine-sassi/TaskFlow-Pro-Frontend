@@ -27,6 +27,17 @@ export const routes: Routes = [
           ),
         data: { title: 'Register' },
       },
+    ],},
+    {
+      path : 'dashboard',
+      canActivate: [authGuard],
+      loadComponent: () =>
+        import('./features/dashboard/dashboard.component').then(
+          (m) => m.DashboardComponent
+        ),
+      data: { title: 'Dashboard' },
+      resolve: { user: userResolver },
+    },
   // ============================================
   // PROTECTED ROUTES - Projects Feature (Person 4)
   // ============================================
@@ -252,8 +263,6 @@ export const routes: Routes = [
       //     ),
       //   data: { title: 'Activity Logs' },
       // },
-    ],
-  },
     ],
   },
 

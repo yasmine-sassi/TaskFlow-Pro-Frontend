@@ -17,6 +17,8 @@ export class Login {
   private router = inject(Router);
   isSubmitting = signal(false);
   errorMessage = signal<string>('');
+  showPassword = signal(false);
+  
   loginForm = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required, Validators. minLength(8)]]
