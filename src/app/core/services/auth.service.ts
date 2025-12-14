@@ -15,8 +15,13 @@ export class AuthService extends BaseService {
 
   // Signal-based state
   currentUserSignal = signal<User | null>(null);
-  isAuthenticated = computed(() => this.currentUserSignal() !== null);
   isAdmin = computed(() => this.currentUserSignal()?.role === UserRole.ADMIN);
+
+  isAuthenticated(): boolean {
+    const isAuth = this.currentUserSignal() !== null;
+    console.log('isAuthenticated check:', { isAuth, user: this.currentUserSignal() });
+    return isAuth;
+  }
 
   constructor() {
     super();
@@ -24,11 +29,14 @@ export class AuthService extends BaseService {
   }
 
   private loadUserFromStorage(): void {
-    const token = this.getToken();
     const userJson = localStorage.getItem('currentUser');
-    if (token && userJson) {
+    console.log('Loading user from storage:', { userJson: !!userJson });
+    if (userJson) {
       const user = JSON.parse(userJson);
+      console.log('Setting current user from storage:', user);
       this.setCurrentUser(user);
+    } else {
+      console.log('No user data in storage');
     }
   }
 
@@ -36,11 +44,13 @@ export class AuthService extends BaseService {
    * Register a new user
    */
   register(dto: RegisterDto): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(this.buildUrl('/auth/register'), dto).pipe(
-      tap((response) => {
-        this.handleAuthSuccess(response);
-      })
-    );
+    return this.http
+      .post<AuthResponse>(this.buildUrl('/auth/register'), dto, { withCredentials: true })
+      .pipe(
+        tap((response) => {
+          this.handleAuthSuccess(response);
+        })
+      );
   }
 
   /**
@@ -48,18 +58,20 @@ export class AuthService extends BaseService {
    */
   login(email: string, password: string): Observable<AuthResponse> {
     const loginDto: LoginDto = { email, password };
-    return this.http.post<AuthResponse>(this.buildUrl('/auth/login'), loginDto).pipe(
-      tap((response) => {
-        this.handleAuthSuccess(response);
-      })
-    );
+    return this.http
+      .post<AuthResponse>(this.buildUrl('/auth/login'), loginDto, { withCredentials: true })
+      .pipe(
+        tap((response) => {
+          this.handleAuthSuccess(response);
+        })
+      );
   }
 
   /**
    * Get current user profile from server
    */
   me(): Observable<{ user: User }> {
-    return this.http.get<{ user: User }>(this.buildUrl('/auth/me')).pipe(
+    return this.http.get<{ user: User }>(this.buildUrl('/auth/me'), { withCredentials: true }).pipe(
       tap((response) => {
         this.setCurrentUser(response.user);
       })
@@ -70,21 +82,22 @@ export class AuthService extends BaseService {
    * Logout user
    */
   logout(): Observable<{ message: string }> {
-    return this.http.post<{ message: string }>(this.buildUrl('/auth/logout'), {}).pipe(
-      tap(() => {
-        this.clearAuthData();
-        this.router.navigate(['/auth/login']);
-      })
-    );
+    return this.http
+      .post<{ message: string }>(this.buildUrl('/auth/logout'), {}, { withCredentials: true })
+      .pipe(
+        tap(() => {
+          this.clearAuthData();
+          this.router.navigate(['/auth/login']);
+        })
+      );
   }
 
   /**
    * Handle successful authentication
    */
   private handleAuthSuccess(response: AuthResponse): void {
-    if (response.access_token) {
-      this.setToken(response.access_token);
-    }
+    // Token is stored in httpOnly cookie by backend
+    // Just store user data
     this.setCurrentUser(response.user);
   }
 
@@ -92,7 +105,7 @@ export class AuthService extends BaseService {
    * Clear all authentication data
    */
   private clearAuthData(): void {
-    localStorage.removeItem('accessToken');
+    // Token is cleared via httpOnly cookie by backend
     localStorage.removeItem('currentUser');
     this.currentUserSubject.next(null);
     this.currentUserSignal.set(null);

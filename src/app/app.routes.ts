@@ -13,31 +13,25 @@ export const routes: Routes = [
     children: [
       {
         path: 'login',
-        loadComponent: () =>
-          import('./features/auth/login/login.component').then(
-            (m) => m.Login
-          ),
+        loadComponent: () => import('./features/auth/login/login.component').then((m) => m.Login),
         data: { title: 'Login' },
       },
       {
         path: 'register',
         loadComponent: () =>
-          import('./features/auth/register/register.component').then(
-            (m) => m.RegisterComponent
-          ),
+          import('./features/auth/register/register.component').then((m) => m.RegisterComponent),
         data: { title: 'Register' },
       },
-    ],},
-    {
-      path : 'dashboard',
-      canActivate: [authGuard],
-      loadComponent: () =>
-        import('./features/dashboard/dashboard.component').then(
-          (m) => m.DashboardComponent
-        ),
-      data: { title: 'Dashboard' },
-      resolve: { user: userResolver },
-    },
+    ],
+  },
+  {
+    path: 'dashboard',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
+    data: { title: 'Dashboard' },
+    resolve: { user: userResolver },
+  },
   // ============================================
   // PROTECTED ROUTES - Projects Feature (Person 4)
   // ============================================
@@ -70,9 +64,7 @@ export const routes: Routes = [
           {
             path: '',
             loadComponent: () =>
-              import('./features/board/board.component').then(
-                (m) => m.BoardComponent
-              ),
+              import('./features/board/board.component').then((m) => m.BoardComponent),
             data: { title: 'Project Board' },
             resolve: { project: projectResolver },
           },
@@ -118,9 +110,7 @@ export const routes: Routes = [
       {
         path: '',
         loadComponent: () =>
-          import('./features/tasks/tasks/tasks.component').then(
-            (m) => m.TasksComponent
-          ),
+          import('./features/tasks/tasks/tasks.component').then((m) => m.TasksComponent),
         data: { title: 'My Tasks' },
       },
       // TODO: Person 5 - Create task-detail component
@@ -240,9 +230,7 @@ export const routes: Routes = [
       {
         path: '',
         loadComponent: () =>
-          import('./features/admin/admin.component').then(
-            (m) => m.AdminComponent
-          ),
+          import('./features/admin/admin.component').then((m) => m.AdminComponent),
         data: { title: 'Admin Dashboard' },
       },
       // TODO: Create admin users-management component
