@@ -2,21 +2,21 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
-import { BreadcrumbsComponent } from '../breadcrumbs/breadcrumbs.component';
 import { GlobalSearchComponent } from '../global-search/global-search.component';
 import { NotificationsDropdownComponent } from '../notifications-dropdown/notifications-dropdown.component';
 import { LucideIconComponent } from '../../shared/components/lucide-icon/lucide-icon.component';
+import { BreadcrumbComponent } from "../breadcrumb/breadcrumb.component";
 
 @Component({
   selector: 'app-header',
   standalone: true,
   imports: [
     CommonModule,
-    BreadcrumbsComponent,
     GlobalSearchComponent,
     NotificationsDropdownComponent,
     LucideIconComponent,
-  ],
+    BreadcrumbComponent
+],
   templateUrl: './header.component.html',
   styleUrls: ['./header.component.css'],
 })
