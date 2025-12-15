@@ -4,11 +4,11 @@
     class="relative p-2 rounded-md hover:bg-secondary transition-colors"
   >
     <lucide-icon name="Bell" [size]="20"></lucide-icon>
-    @if (unreadCount > 0) {
+    @if (unreadCount() > 0) {
     <span
       class="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground"
     >
-      {{ unreadCount }}
+      {{ unreadCount() }}
     </span>
     }
   </button>
@@ -20,58 +20,168 @@
       <div class="flex items-center gap-2">
         <lucide-icon name="Bell" [size]="18"></lucide-icon>
         <h3 class="font-semibold">Notifications</h3>
-        @if (unreadCount > 0) {
+        @if (unreadCount() > 0) {
         <span
           class="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary text-[11px] font-medium text-primary-foreground px-1.5"
         >
-          {{ unreadCount }}
+          {{ unreadCount() }}
         </span>
         }
       </div>
-      @if (unreadCount > 0) {
-      <button
-        (click)="markAllAsRead()"
-        class="flex items-center gap-1 text-xs text-primary hover:underline"
-      >
-        <lucide-icon name="check-check" [size]="14"></lucide-icon>
-        Mark all read
-      </button>
-      }
+      <div class="flex items-center gap-2">
+        <button
+          (click)="showFilters.set(!showFilters())"
+          class="p-1 rounded-md hover:bg-accent transition-colors"
+        >
+          <lucide-icon name="Settings" [size]="14"></lucide-icon>
+        </button>
+        @if (unreadCount() > 0) {
+        <button
+          (click)="markAllAsRead()"
+          class="flex items-center gap-1 text-xs text-primary hover:underline"
+        >
+          <lucide-icon name="check-check" [size]="14"></lucide-icon>
+          Mark all read
+        </button>
+        }
+      </div>
     </div>
 
+    <!-- Filters -->
+    @if (showFilters()) {
+    <div class="px-4 py-2 border-b border-border bg-accent/20">
+      <div class="flex flex-wrap gap-2">
+        <button
+          (click)="setTypeFilter(null)"
+          class="px-2 py-1 text-xs rounded-md"
+          [ngClass]="!notificationsService.typeFilterSignal() ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-accent'"
+        >
+          All
+        </button>
+        <button
+          (click)="setTypeFilter('TASK_ASSIGNED')"
+          class="px-2 py-1 text-xs rounded-md"
+          [ngClass]="notificationsService.typeFilterSignal() === 'TASK_ASSIGNED' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-accent'"
+        >
+          task assigned
+        </button>
+        <button
+          (click)="setTypeFilter('TASK_UPDATED')"
+          class="px-2 py-1 text-xs rounded-md"
+          [ngClass]="notificationsService.typeFilterSignal() === 'TASK_UPDATED' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-accent'"
+        >
+          task updated
+        </button>
+        <button
+          (click)="setTypeFilter('TASK_COMPLETED')"
+          class="px-2 py-1 text-xs rounded-md"
+          [ngClass]="notificationsService.typeFilterSignal() === 'TASK_COMPLETED' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-accent'"
+        >
+          task completed
+        </button>
+        <button
+          (click)="setTypeFilter('COMMENT_ADDED')"
+          class="px-2 py-1 text-xs rounded-md"
+          [ngClass]="notificationsService.typeFilterSignal() === 'COMMENT_ADDED' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-accent'"
+        >
+          comment added
+        </button>
+        <button
+          (click)="setTypeFilter('PROJECT_INVITE')"
+          class="px-2 py-1 text-xs rounded-md"
+          [ngClass]="notificationsService.typeFilterSignal() === 'PROJECT_INVITE' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-accent'"
+        >
+          project invite
+        </button>
+        <button
+          (click)="setTypeFilter('MENTION')"
+          class="px-2 py-1 text-xs rounded-md"
+          [ngClass]="notificationsService.typeFilterSignal() === 'MENTION' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-accent'"
+        >
+          mention
+        </button>
+      </div>
+      <div class="flex items-center gap-2 mt-2">
+        <label class="flex items-center gap-1 text-xs">
+          <input
+            type="checkbox"
+            [checked]="notificationsService.showUnreadOnlySignal()"
+            (change)="toggleShowUnreadOnly()"
+            class="rounded"
+          />
+          Unread only
+        </label>
+        <button
+          (click)="clearFilters()"
+          class="text-xs text-primary hover:underline ml-auto"
+        >
+          Clear filters
+        </button>
+      </div>
+    </div>
+    }
+
+    <!-- Loading/Error States -->
+    @if (loading()) {
+    <div class="p-8 text-center">
+      <lucide-icon name="RefreshCw" [size]="24" class="mx-auto animate-spin text-muted-foreground"></lucide-icon>
+      <p class="mt-2 text-sm text-muted-foreground">Loading notifications...</p>
+    </div>
+    } @else if (error()) {
+    <div class="p-8 text-center">
+      <lucide-icon name="AlertCircle" [size]="24" class="mx-auto text-destructive"></lucide-icon>
+      <p class="mt-2 text-sm text-destructive">{{ error() }}</p>
+      <button
+        (click)="loadNotifications()"
+        class="mt-2 text-xs text-primary hover:underline"
+      >
+        Try again
+      </button>
+    </div>
+    } @else {
     <!-- Notifications List -->
     <div class="max-h-96 overflow-y-auto">
-      @if (notifications().length > 0) { @for (notification of notifications(); track
-      notification.id) {
-      <button
-        (click)="markAsRead(notification.id)"
-        class="flex w-full gap-3 px-4 py-3 text-left transition-colors border-b border-border last:border-0"
-        [ngClass]="!notification.read ? 'bg-accent/50 hover:bg-accent' : 'hover:bg-accent'"
-      >
-        <div
-          class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-          [ngClass]="getNotificationColor(notification.type)"
+      @if (filteredNotifications().length > 0) {
+      @for (notification of filteredNotifications(); track notification.id) {
+      <div class="relative group">
+        <button
+          (click)="markAsRead(notification.id)"
+          class="flex w-full gap-3 px-4 py-3 text-left transition-colors border-b border-border last:border-0"
+          [ngClass]="!notification.isRead ? 'bg-accent/50 hover:bg-accent' : 'hover:bg-accent'"
         >
-          <lucide-icon [name]="getNotificationIcon(notification.type)" [size]="16"></lucide-icon>
-        </div>
-        <div class="flex-1 space-y-1 min-w-0">
-          <div class="flex items-start justify-between gap-2">
-            <p class="text-sm font-medium leading-none">
-              {{ notification.title }}
-            </p>
-            @if (!notification.read) {
-            <div class="h-2 w-2 rounded-full bg-primary shrink-0"></div>
-            }
+          <div
+            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+            [ngClass]="getNotificationColor(notification.type)"
+          >
+            <lucide-icon [name]="getNotificationIcon(notification.type)" [size]="16"></lucide-icon>
           </div>
-          <p class="text-sm text-muted-foreground line-clamp-2">
-            {{ notification.description }}
-          </p>
-          <p class="text-xs text-muted-foreground">
-            {{ getTimeAgo(notification.createdAt) }}
-          </p>
-        </div>
-      </button>
-      } } @else {
+          <div class="flex-1 space-y-1 min-w-0">
+            <div class="flex items-start justify-between gap-2">
+              <p class="text-sm font-medium leading-none">
+                {{ notification.title }}
+              </p>
+              @if (!notification.isRead) {
+              <div class="h-2 w-2 rounded-full bg-primary shrink-0"></div>
+              }
+            </div>
+            <p class="text-sm text-muted-foreground line-clamp-2">
+              {{ notification.message }}
+            </p>
+            <p class="text-xs text-muted-foreground">
+              {{ getTimeAgo(notification.createdAt) }}
+            </p>
+          </div>
+        </button>
+        <!-- Delete button (shown on hover) -->
+        <button
+          (click)="deleteNotification(notification.id)"
+          class="absolute top-2 right-2 p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity bg-destructive text-destructive-foreground hover:bg-destructive/90"
+        >
+          <lucide-icon name="X" [size]="12"></lucide-icon>
+        </button>
+      </div>
+      }
+      } @else {
       <div class="p-8 text-center">
         <lucide-icon
           name="bell-off"
@@ -83,6 +193,7 @@
       </div>
       }
     </div>
+    }
 
     <!-- Footer -->
     <div class="p-2 border-t border-border">
