@@ -15,6 +15,7 @@ import {
   UniqueEmailValidator,
 } from '../../../shared/validators';
 import { ProjectsService } from '../../../core/services/projects.service';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-project-form',
@@ -28,6 +29,7 @@ export class ProjectFormComponent {
   private projectsService = inject(ProjectsService);
   private router = inject(Router);
   private destroyRef = inject(DestroyRef);
+  private authService = inject(AuthService);
 
   isSubmitting = signal(false);
   errorMessage = signal<string | null>(null);
@@ -93,12 +95,20 @@ export class ProjectFormComponent {
       this.isSubmitting.set(true);
       this.errorMessage.set(null);
 
+      const user = this.authService.getCurrentUser();
+      if (!user) {
+        this.errorMessage.set('User not authenticated');
+        this.isSubmitting.set(false);
+        return;
+      }
+
       const formValue = this.projectForm.value;
-      
+
       const createProjectDto = {
         name: formValue.name,
         description: formValue.description || undefined,
         color: formValue.color,
+        ownerId: user.id,
       };
 
       this.projectsService.createProject(createProjectDto)
