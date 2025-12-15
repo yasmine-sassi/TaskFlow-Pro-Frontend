@@ -103,6 +103,8 @@ export class NotificationsService extends BaseService {
     });
 
     // Auto-refresh unread count every 30 seconds
+    // Temporarily disabled for debugging
+    /*
     effect(() => {
       const polling$ = interval(30000).pipe(
         startWith(0),
@@ -120,6 +122,7 @@ export class NotificationsService extends BaseService {
 
       return () => subscription.unsubscribe();
     });
+    */
   }
   /**
    * Get all notifications for current user
@@ -211,18 +214,25 @@ export class NotificationsService extends BaseService {
    * Mark notification as read and update signals
    */
   markAsReadWithSignal(notificationId: string): Observable<Notification> {
+    console.log('Service: Marking notification as read:', notificationId);
     this.loadingSignal.set(true);
     this.errorSignal.set(null);
     return this.markAsRead(notificationId).pipe(
       tap((updatedNotification) => {
+        console.log('Service: API call successful, updating signals');
+        console.log('Service: Updated notification:', updatedNotification);
         this.notificationsSignal.update(notifications =>
           notifications.map(n => n.id === notificationId ? updatedNotification : n)
         );
         // Update unread count
-        this.unreadCountSignal.update(count => Math.max(0, count - 1));
+        const currentCount = this.unreadCountSignal();
+        const newCount = Math.max(0, currentCount - 1);
+        console.log('Service: Unread count', currentCount, '->', newCount);
+        this.unreadCountSignal.set(newCount);
         this.loadingSignal.set(false);
       }),
       catchError((error) => {
+        console.error('Service: Failed to mark notification as read:', error);
         this.errorSignal.set(error.message || 'Failed to mark notification as read');
         this.loadingSignal.set(false);
         return throwError(() => error);

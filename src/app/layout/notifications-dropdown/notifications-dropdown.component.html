@@ -35,7 +35,7 @@
         >
           <lucide-icon name="Settings" [size]="14"></lucide-icon>
         </button>
-        @if (unreadCount() > 0) {
+        @if (hasUnreadNotifications()) {
         <button
           (click)="markAllAsRead()"
           class="flex items-center gap-1 text-xs text-primary hover:underline"
@@ -132,7 +132,7 @@
       <lucide-icon name="AlertCircle" [size]="24" class="mx-auto text-destructive"></lucide-icon>
       <p class="mt-2 text-sm text-destructive">{{ error() }}</p>
       <button
-        (click)="loadNotifications()"
+        (click)="notificationsService.loadNotifications().subscribe()"
         class="mt-2 text-xs text-primary hover:underline"
       >
         Try again

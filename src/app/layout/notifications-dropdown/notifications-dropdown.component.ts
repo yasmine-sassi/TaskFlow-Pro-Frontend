@@ -28,38 +28,43 @@ export class NotificationsDropdownComponent implements OnInit {
   hasUnreadNotifications = this.notificationsService.hasUnreadNotifications;
 
   constructor() {
-    // Load notifications on component init
-    effect(() => {
-      if (this.showDropdown()) {
-        this.loadNotifications();
-      }
-    });
+    // No need to load data here - it's handled by the resolver
+    // Just set up effects for UI interactions
   }
 
   ngOnInit() {
-    // Load initial unread count
-    this.notificationsService.loadUnreadCount().subscribe();
+    // Data is already loaded by resolver, just start polling for updates
+    this.startPolling();
+  }
+
+  private startPolling() {
+    // Poll for unread count updates every 30 seconds
+    setInterval(() => {
+      this.notificationsService.loadUnreadCount().subscribe({
+        next: () => {
+          // Unread count updated
+        },
+        error: (error) => {
+          console.error('Failed to poll unread count:', error);
+        }
+      });
+    }, 30000); // 30 seconds
   }
 
   toggleDropdown() {
     this.showDropdown.update((v) => !v);
   }
 
-  loadNotifications() {
-    this.notificationsService.loadNotifications().subscribe({
-      next: () => {
-        // Notifications loaded successfully
-      },
-      error: (error) => {
-        console.error('Failed to load notifications:', error);
-      }
-    });
-  }
 
   markAsRead(notificationId: string) {
+    console.log('Marking notification as read:', notificationId);
+    const notification = this.notifications().find(n => n.id === notificationId);
+    console.log('Notification before:', notification);
+
     this.notificationsService.markAsReadWithSignal(notificationId).subscribe({
-      next: () => {
-        // Notification marked as read
+      next: (updatedNotification) => {
+        console.log('Notification marked as read successfully:', updatedNotification);
+        console.log('Unread count after:', this.unreadCount());
         this.playNotificationSound();
       },
       error: (error) => {
