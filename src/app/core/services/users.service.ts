@@ -1,6 +1,6 @@
 import { Injectable, signal, computed, effect, inject } from '@angular/core';
 import { Observable, tap, catchError, throwError } from 'rxjs';
-import { shareReplay } from 'rxjs/operators';
+import { shareReplay, map } from 'rxjs/operators';
 import { User } from '../models/user.model';
 import { BaseService } from './base.service';
 import { LoggerService } from './logger.service';
@@ -25,6 +25,7 @@ export class UsersService extends BaseService {
   // Only RxJS caching for data fetching
   private currentUserCache$: Observable<User> | null = null;
   private allUsersCache$: Observable<User[]> | null = null;
+  private assignableUsersCache = new Map<string, Observable<User[]>>();
   
   currentUserSignal = signal<User | null>(null);
   /**
@@ -34,8 +35,9 @@ export class UsersService extends BaseService {
     if (!this.currentUserCache$) {
       this.logger.info('Fetching current user profile from API');
       this.currentUserCache$ = this.http
-        .get<User>(this.buildUrl('/users/profile'))
+        .get<{ data: User }>(this.buildUrl('/users/profile'))
         .pipe(
+          map(response => response.data),
           tap(() => this.logger.info('Current user profile cached')),
           shareReplay(1),
           catchError((error) => {
@@ -50,16 +52,42 @@ export class UsersService extends BaseService {
   getAllUsers(): Observable<User[]> {
     if (!this.allUsersCache$) {
       this.allUsersCache$ = this.http
-        .get<User[]>(this.buildUrl('/users'))
-        .pipe(shareReplay(1));
+        .get<{ data: User[] }>(this.buildUrl('/users'))
+        .pipe(
+          map(response => response.data),
+          shareReplay(1)
+        );
     }
     return this.allUsersCache$;
   }
 
+  /**
+   * Get users assignable to a specific project (admin or project owner)
+   */
+  getAssignableUsers(projectId: string): Observable<User[]> {
+    if (!projectId) return this.getAllUsers();
+    if (!this.assignableUsersCache.has(projectId)) {
+      const req$ = this.http
+        .get<{ data: User[] }>(this.buildUrl(`/projects/${projectId}/assignable-users`))
+        .pipe(
+          map((res) => res.data),
+          shareReplay(1),
+          catchError((err) => {
+            // Invalidate cache entry on error
+            this.assignableUsersCache.delete(projectId);
+            return throwError(() => err);
+          })
+        );
+      this.assignableUsersCache.set(projectId, req$);
+    }
+    return this.assignableUsersCache.get(projectId)!;
+  }
+
   updateProfile(dto: UpdateProfileDto): Observable<User> {
     return this.http
-      .patch<User>(this.buildUrl('/users/profile'), dto)
+      .patch<{ data: User }>(this.buildUrl('/users/profile'), dto)
       .pipe(
+        map(response => response.data),
         tap(() => {
           // Invalidate cache on update
           this.currentUserCache$ = null;
@@ -90,5 +118,6 @@ export class UsersService extends BaseService {
   clearCache(): void {
     this.currentUserCache$ = null;
     this.allUsersCache$ = null;
+    this.assignableUsersCache.clear();
   }
 }

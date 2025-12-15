@@ -1,1 +1,166 @@
-<p>project-card.component works!</p>
+<div
+  class="group rounded-xl border border-border bg-card p-5 shadow-soft transition-smooth hover:shadow-medium hover:border-primary/20"
+  [class.cursor-pointer]="canEdit"
+  (click)="onOpenEdit()"
+>
+  <!-- Header -->
+  <div class="flex items-start gap-3 mb-4">
+    <div
+      class="flex h-10 w-10 items-center justify-center rounded-lg"
+      [style.background-color]="getProjectColor() + '20'"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        [style.color]="getProjectColor()"
+      >
+        <path
+          d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"
+        ></path>
+      </svg>
+    </div>
+    <div class="flex-1 min-w-0">
+      <h3
+        class="font-semibold text-card-foreground truncate group-hover:text-primary transition-colors"
+      >
+        {{ project.name }}
+      </h3>
+      <p class="text-xs text-muted-foreground mt-0.5">
+        {{ getTaskCount() }} tasks · {{ getCompletedTaskCount() }} completed
+      </p>
+    </div>
+    @if (canEdit) {
+    <button
+      type="button"
+      class="ml-auto inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium border border-input text-foreground hover:bg-muted"
+      title="Edit project"
+      (click)="onOpenEdit($event)"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 20h9" />
+        <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4Z" />
+      </svg>
+      Edit
+    </button>
+    }
+  </div>
+
+  <!-- Description -->
+  @if (project.description) {
+  <p class="text-sm text-muted-foreground line-clamp-2 mb-4">{{ project.description }}</p>
+  }
+
+  <!-- Footer -->
+  <div class="flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      @if (project.isArchived) {
+      <span class="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground border border-border">Archived</span>
+      }
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        class="text-muted-foreground"
+      >
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+        <circle cx="9" cy="7" r="4"></circle>
+        <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+      </svg>
+      <span class="text-xs text-muted-foreground">
+        {{ getMemberCount() }} member{{ getMemberCount() !== 1 ? 's' : '' }}
+      </span>
+    </div>
+
+    <div class="flex -space-x-2 items-center">
+      @for (member of getDisplayMembers(); track member.id) {
+      <div
+        class="h-7 w-7 rounded-full border-2 border-card bg-secondary flex items-center justify-center text-[10px] font-medium"
+        [title]="member.user?.email || ''"
+      >
+        {{ getInitials(member.user?.email || 'U') }}
+      </div>
+      } @if (getRemainingMemberCount() > 0) {
+      <div
+        class="flex h-7 w-7 items-center justify-center rounded-full border-2 border-card bg-muted text-[10px] font-medium text-muted-foreground"
+      >
+        +{{ getRemainingMemberCount() }}
+      </div>
+      }
+      
+    </div>
+  </div>
+
+  <!-- Progress bar -->
+  <div class="mt-4">
+    <div class="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+      <div
+        class="h-full rounded-full transition-all duration-500"
+        [style.width.%]="getProgressPercentage()"
+        [style.background-color]="getProjectColor()"
+      ></div>
+    </div>
+  </div>
+
+  <!-- Admin actions row (separate) -->
+  @if (isAdmin) {
+  <div class="mt-3 flex justify-end gap-2">
+    @if (!project.isArchived) {
+    <button
+      type="button"
+      class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium border border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100"
+      title="Archive project"
+      (click)="onArchive($event)"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="21 8 21 21 3 21 3 8" />
+        <rect x="1" y="3" width="22" height="5" />
+      </svg>
+      Archive
+    </button>
+    }
+    @if (project.isArchived) {
+    <button
+      type="button"
+      class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium border border-emerald-300 text-emerald-700 bg-emerald-50 hover:bg-emerald-100"
+      title="Unarchive project"
+      (click)="onUnarchive($event)"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="21 8 21 21 3 21 3 8" />
+        <rect x="1" y="3" width="22" height="5" />
+      </svg>
+      Unarchive
+    </button>
+    }
+    <button
+      type="button"
+      class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium border border-rose-300 text-rose-700 bg-rose-50 hover:bg-rose-100"
+      title="Delete project"
+      (click)="onDelete($event)"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="3 6 5 6 21 6" />
+        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+        <path d="M10 11v6" />
+        <path d="M14 11v6" />
+        <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+      </svg>
+      Delete
+    </button>
+  </div>
+  }
+</div>

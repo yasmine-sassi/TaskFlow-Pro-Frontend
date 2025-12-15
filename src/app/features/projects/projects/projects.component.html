@@ -1,1 +1,163 @@
-<p>projects.component works!</p>
+<div class="space-y-6 animate-fade-in pb-8">
+  <!-- Header -->
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold text-foreground">Projects</h1>
+      <p class="text-muted-foreground">
+        {{ filteredProjects().length }} project{{ filteredProjects().length !== 1 ? 's' : '' }}
+      </p>
+    </div>
+    <div class="flex items-center gap-3">
+      @if (currentUser()?.role === UserRole.ADMIN) {
+      <div class="hidden sm:flex items-center rounded-md border border-input bg-background p-0.5 text-xs">
+        <button type="button"
+          (click)="adminFilter.set('all')"
+          class="px-2 py-1 rounded-md transition-colors"
+          [class.bg-muted]="adminFilter() === 'all'"
+        >All</button>
+        <button type="button"
+          (click)="adminFilter.set('active')"
+          class="px-2 py-1 rounded-md transition-colors"
+          [class.bg-muted]="adminFilter() === 'active'"
+        >Active</button>
+        <button type="button"
+          (click)="adminFilter.set('archived')"
+          class="px-2 py-1 rounded-md transition-colors"
+          [class.bg-muted]="adminFilter() === 'archived'"
+        >Archived</button>
+      </div>
+      }
+      @if (currentUser()?.role === UserRole.ADMIN) {
+      <button
+        (click)="showModal.set(true)"
+        class="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        New Project
+      </button>
+      }
+    </div>
+  </div>
+
+  <!-- Search -->
+  <div class="relative max-w-sm">
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+    >
+      <circle cx="11" cy="11" r="8"></circle>
+      <path d="m21 21-4.35-4.35"></path>
+    </svg>
+    <input
+      type="text"
+      [(ngModel)]="searchQuery"
+      placeholder="Search projects..."
+      class="w-full pl-9 px-3 py-2 text-sm rounded-md bg-background border border-input text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+    />
+  </div>
+
+  <!-- Content -->
+  @if (isLoading()) {
+  <div class="flex items-center justify-center py-12">
+    <div
+      class="inline-flex items-center justify-center h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin"
+    ></div>
+    <span class="ml-2 text-sm text-muted-foreground">Loading projects...</span>
+  </div>
+  } @else if (filteredProjects().length === 0) {
+  <div
+    class="flex flex-col items-center justify-center py-12 rounded-lg border-2 border-dashed border-border"
+  >
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="48"
+      height="48"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      class="text-muted-foreground/50 mb-3"
+    >
+      <path
+        d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"
+      ></path>
+    </svg>
+    <h3 class="text-lg font-medium text-foreground">
+      {{ searchQuery() ? 'No matching projects' : 'No projects yet' }}
+    </h3>
+    <p class="text-sm text-muted-foreground text-center mt-1 max-w-sm">
+      @if (searchQuery()) { Try adjusting your search } @else if (currentUser()?.role === UserRole.ADMIN) { Get started by creating your first
+      project } @else { You are not assigned to any projects yet }
+    </p>
+    @if (!searchQuery() && currentUser()?.role === UserRole.ADMIN) {
+    <button
+      (click)="showModal.set(true)"
+      class="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+      </svg>
+      Create Project
+    </button>
+    }
+  </div>
+  } @else {
+  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    @for (project of filteredProjects(); track project.id) {
+    <app-project-card
+      [project]="project"
+      [canEdit]="canEditProject(project)"
+      [isAdmin]="currentUser()?.role === UserRole.ADMIN"
+      (archive)="onArchiveProject($event)"
+      (unarchive)="onUnarchiveProject($event)"
+      (projectDeleted)="onDeleteProject($event)"
+      (projectUpdated)="onProjectUpdated($event)"
+      (openEdit)="onOpenEdit($event)"
+    />
+    }
+  </div>
+  }
+</div>
+
+<!-- Create Project Modal -->
+<app-project-modal
+  [isOpen]="showModal()"
+  [projectToEdit]="selectedProject()"
+  (close)="showModal.set(false)"
+  (projectCreated)="onProjectCreated($event)"
+  (projectUpdated)="onProjectUpdated($event)"
+/>

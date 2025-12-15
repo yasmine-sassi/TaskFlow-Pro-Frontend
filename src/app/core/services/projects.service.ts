@@ -10,6 +10,9 @@ export interface CreateProjectDto {
   description?: string;
   color?: string;
   isArchived?: boolean;
+  ownerId: string;
+  editors?: string[];
+  viewers?: string[];
 }
 
 export interface UpdateProjectDto {
@@ -17,6 +20,9 @@ export interface UpdateProjectDto {
   description?: string;
   color?: string;
   isArchived?: boolean;
+  ownerId?: string;
+  editors?: string[];
+  viewers?: string[];
 }
 
 export interface AddMemberDto {
@@ -56,7 +62,8 @@ export class ProjectsService extends BaseService {
    * Create a new project with cache invalidation
    */
   createProject(dto: CreateProjectDto): Observable<Project> {
-    return this.http.post<Project>(this.buildUrl('/projects'), dto).pipe(
+    return this.http.post<ApiResponse<Project>>(this.buildUrl('/projects'), dto).pipe(
+      map(response => response.data),
       tap(() => {
         this.invalidateAllProjectsCache();
         this.logger.info('Project created, cache invalidated');
@@ -117,10 +124,12 @@ export class ProjectsService extends BaseService {
    * Update a project with cache invalidation
    */
   updateProject(projectId: string, dto: UpdateProjectDto): Observable<Project> {
-    return this.http.patch<Project>(this.buildUrl(`/projects/${projectId}`), dto).pipe(
+    return this.http.patch<ApiResponse<Project>>(this.buildUrl(`/projects/${projectId}`), dto).pipe(
+      map(response => response.data),
       tap(() => {
         this.invalidateProjectCache(projectId);
         this.invalidateAllProjectsCache();
+        this.invalidateProjectMembersCache(projectId);
         this.logger.info(`Project ${projectId} updated, cache invalidated`);
       }),
       catchError((error) => {
@@ -152,7 +161,10 @@ export class ProjectsService extends BaseService {
    * Archive/Unarchive a project with cache invalidation
    */
   toggleArchive(projectId: string, isArchived: boolean): Observable<Project> {
-    return this.http.patch<Project>(this.buildUrl(`/projects/${projectId}`), { isArchived }).pipe(
+    const url = isArchived
+      ? this.buildUrl(`/projects/${projectId}/archive`)
+      : this.buildUrl(`/projects/${projectId}/unarchive`);
+    return this.http.patch<Project>(url, {}).pipe(
       tap(() => {
         this.invalidateProjectCache(projectId);
         this.invalidateAllProjectsCache();
@@ -177,7 +189,8 @@ export class ProjectsService extends BaseService {
       this.logger.info(`Fetching members for project ${projectId} from API`);
       this.projectMembersCache.set(
         projectId,
-        this.http.get<ProjectMember[]>(this.buildUrl(`/projects/${projectId}/members`)).pipe(
+        this.http.get<{ data: ProjectMember[] }>(this.buildUrl(`/projects/${projectId}/members`)).pipe(
+          map(response => response.data),
           tap(() => this.logger.info(`Members for project ${projectId} cached`)),
           shareReplay(1),
           catchError((error) => {
@@ -196,7 +209,8 @@ export class ProjectsService extends BaseService {
    * Add a member to the project with cache invalidation
    */
   addMember(projectId: string, dto: AddMemberDto): Observable<ProjectMember> {
-    return this.http.post<ProjectMember>(this.buildUrl(`/projects/${projectId}/members`), dto).pipe(
+    return this.http.post<{ data: ProjectMember }>(this.buildUrl(`/projects/${projectId}/members`), dto).pipe(
+      map(response => response.data),
       tap(() => {
         this.invalidateProjectMembersCache(projectId);
         this.invalidateProjectCache(projectId);
