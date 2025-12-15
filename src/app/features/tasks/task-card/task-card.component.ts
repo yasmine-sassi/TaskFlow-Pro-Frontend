@@ -9,7 +9,7 @@ import { PriorityBadgeComponent } from '../priority-badge/priority-badge.compone
 @Component({
   selector: 'app-task-card',
   standalone: true,
-  imports: [CommonModule, FormsModule, StatusBadgeComponent, PriorityBadgeComponent],
+  imports: [CommonModule, FormsModule, PriorityBadgeComponent],
   templateUrl: './task-card.component.html',
   styleUrls: ['./task-card.component.css']
 })
