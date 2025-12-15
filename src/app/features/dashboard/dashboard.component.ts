@@ -11,6 +11,7 @@ import { ProjectsService } from '../../core/services/projects.service';
 import { Task, TaskStatus, TaskPriority } from '../../core/models/task.model';
 import { Project } from '../../core/models/project.model';
 import { TaskCardComponent } from '../tasks/task-card/task-card.component';
+import { LabelsService } from '../../core/services/labels.service';
 
 interface DashboardStats {
   todoCount: number;
@@ -30,6 +31,7 @@ export class DashboardComponent implements OnInit {
   private authService = inject(AuthService);
   private tasksService = inject(TasksService);
   private projectsService = inject(ProjectsService);
+  private labelsService = inject(LabelsService);
 
   // Signals
   isLoading = signal(true);
@@ -68,40 +70,17 @@ export class DashboardComponent implements OnInit {
         catchError(error => {
           console.error('Error loading tasks:', error);
           // Return empty tasks array
-          return [{ data: [] }];
+          return [[]];
         })
       )
     }).pipe(
       map(({ projects, tasks }) => {
-        // Debug logs
-        console.log('Raw projects response:', projects);
-        console.log('Raw tasks response:', tasks);
-
-        // Handle tasks response - it might be { data: Task[], meta: {} }
-        let tasksArray: Task[] = [];
-        if (Array.isArray(tasks)) {
-          tasksArray = tasks;
-        } else if (tasks && typeof tasks === 'object' && 'data' in tasks) {
-          tasksArray = (tasks as any).data || [];
-        }
-
-        // Handle projects response - should be Project[] directly
-        let projectsArray: Project[] = [];
-        if (Array.isArray(projects)) {
-          projectsArray = projects;
-        } else if (projects && typeof projects === 'object') {
-          // Try to handle unexpected formats
-          projectsArray = Object.values(projects);
-        }
-
-        console.log('Processed tasks:', tasksArray);
-        console.log('Processed projects:', projectsArray);
 
         // Calculate stats
-        const stats = this.calculateStats(tasksArray);
+        const stats = this.calculateStats(tasks);
         
         // Get recent tasks (last 5 updated)
-        const recent = [...tasksArray]
+        const recent = [...tasks]
           .sort((a, b) => 
             new Date(b.updatedAt || b.createdAt || 0).getTime() - 
             new Date(a.updatedAt || a.createdAt || 0).getTime()
@@ -109,7 +88,7 @@ export class DashboardComponent implements OnInit {
           .slice(0, 5);
         
         // Get high priority incomplete tasks
-        const highPriority = tasksArray
+        const highPriority = tasks
           .filter(t => {
             const isHighPriority = t.priority === TaskPriority.HIGH || t.priority === TaskPriority.URGENT;
             const isNotDone = t.status !== TaskStatus.DONE;
@@ -117,7 +96,7 @@ export class DashboardComponent implements OnInit {
           })
           .slice(0, 3);
 
-        return { stats, recent, highPriority, projects: projectsArray };
+        return { stats, recent, highPriority, projects: projects };
       }),
       catchError(error => {
         console.error('Dashboard load error:', error);
@@ -208,4 +187,13 @@ export class DashboardComponent implements OnInit {
   closeTaskModal() {
     this.selectedTask.set(null);
   }
+  getProjectForTask(task: Task): { name: string; color: string } | null {
+  if (!task.projectId) return null;
+  const project = this.projects().find(p => p.id === task.projectId);
+  if (!project) return null;
+  return {
+    name: project.name,
+    color: project.color? project.color : '#000000'
+  };
+}
 }

@@ -132,53 +132,55 @@
 
     <!-- Content Grid: Recent Activity & High Priority -->
     <div class="grid gap-6 lg:grid-cols-2">
-      <!-- Recent Activity -->
-      <div class="rounded-xl border border-border bg-card shadow-soft">
-        <div class="border-b border-border p-6">
-          <h2 class="text-base font-medium text-foreground">Recent Activity</h2>
-        </div>
-        <div class="p-6">
-          @if (recentTasks().length === 0) {
-            <p class="text-sm text-muted-foreground text-center py-8">
-              No recent activity
-            </p>
-          } @else {
-            <div class="space-y-3">
-              @for (task of recentTasks(); track task.id) {
-                <app-task-card
-                  [task]="task"
-                  [showProject]="true"
-                  (cardClick)="openTaskModal(task)"
-                />
-              }
-            </div>
+  <!-- Recent Activity -->
+  <div class="rounded-xl border border-border bg-card shadow-soft">
+    <div class="border-b border-border p-6">
+      <h2 class="text-base font-medium text-foreground">Recent Activity</h2>
+    </div>
+    <div class="p-6">
+      @if (recentTasks().length === 0) {
+        <p class="text-sm text-muted-foreground text-center py-8">
+          No recent activity
+        </p>
+      } @else {
+        <div class="space-y-3">
+          @for (task of recentTasks(); track task.id) {
+            <app-task-card
+              [task]="task"
+              [showProject]="true"
+              [project]="getProjectForTask(task)"
+              (cardClick)="openTaskModal(task)"
+            />
           }
         </div>
-      </div>
-
-      <!-- High Priority -->
-      <div class="rounded-xl border border-border bg-card shadow-soft">
-        <div class="border-b border-border p-6">
-          <h2 class="text-base font-medium text-foreground">High Priority</h2>
-        </div>
-        <div class="p-6">
-          @if (highPriorityTasks().length === 0) {
-            <p class="text-sm text-muted-foreground text-center py-8">
-              No high priority tasks pending
-            </p>
-          } @else {
-            <div class="space-y-3">
-              @for (task of highPriorityTasks(); track task.id) {
-                <app-task-card
-                  [task]="task"
-                  [showProject]="true"
-                  (cardClick)="openTaskModal(task)"
-                />
-              }
-            </div>
+      }
+    </div>
+  </div>
+  
+  <!-- High Priority -->
+  <div class="rounded-xl border border-border bg-card shadow-soft">
+    <div class="border-b border-border p-6">
+      <h2 class="text-base font-medium text-foreground">High Priority</h2>
+    </div>
+    <div class="p-6">
+      @if (highPriorityTasks().length === 0) {
+        <p class="text-sm text-muted-foreground text-center py-8">
+          No high priority tasks pending
+        </p>
+      } @else {
+        <div class="space-y-3">
+          @for (task of highPriorityTasks(); track task.id) {
+            <app-task-card
+              [task]="task"
+              [showProject]="true"
+              [project]="getProjectForTask(task)"
+              (cardClick)="openTaskModal(task)"
+            />
           }
         </div>
-      </div>
+      }
+    </div>
+  </div>
     </div>
   }
 </div>

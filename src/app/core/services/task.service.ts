@@ -1,6 +1,6 @@
 import { Injectable, signal, computed, effect, inject } from '@angular/core';
 import { HttpParams } from '@angular/common/http';
-import { Observable, tap, catchError, throwError } from 'rxjs';
+import { Observable, tap, catchError, throwError, map } from 'rxjs';
 import { Task, TaskStatus, TaskPriority } from '../models/task.model';
 import { BaseService } from './base.service';
 import { LoggerService } from './logger.service';
@@ -25,6 +25,7 @@ export interface UpdateTaskDto {
   priority?: TaskPriority;
   dueDate?: string;
   position?: number;
+  labelId?: string;
 }
 
 export interface FilterTaskDto {
@@ -32,18 +33,16 @@ export interface FilterTaskDto {
   priority?: TaskPriority;
   assigneeId?: string;
   search?: string;
+  labelId?: string;
   page?: number;
   limit?: number;
 }
 
-export interface TaskListResponse {
-  data: Task[];
-  meta: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
+export interface ApiResponse<T> {
+  statusCode: number;
+  message: string;
+  data: T;
+  timestamp: string;
 }
 
 @Injectable({
@@ -63,6 +62,7 @@ export class TasksService extends BaseService {
   priorityFilterSignal = signal<TaskPriority | null>(null);
   assigneeFilterSignal = signal<string | null>(null);
   searchFilterSignal = signal<string>('');
+  labelFilterSignal = signal<string | null>(null);
 
   // Computed properties for derived states
   filteredTasksSignal = computed(() => {
@@ -70,6 +70,7 @@ export class TasksService extends BaseService {
     const statusFilter = this.statusFilterSignal();
     const priorityFilter = this.priorityFilterSignal();
     const assigneeFilter = this.assigneeFilterSignal();
+    const labelFilter = this.labelFilterSignal();
     const searchFilter = this.searchFilterSignal().toLowerCase();
 
     return tasks.filter(task => {
@@ -87,6 +88,7 @@ export class TasksService extends BaseService {
       if (assigneeFilter && !task.assignees?.some(assignee => assignee.id === assigneeFilter)) {
         return false;
       }
+      if (labelFilter && !task.labels?.some(l => l.id === labelFilter)) return false;
 
       // Search filter (title and description)
       if (searchFilter) {
@@ -165,19 +167,20 @@ export class TasksService extends BaseService {
   /**
    * Get all tasks for a project with optional filters
    */
-  getTasksByProject(projectId: string, filter?: FilterTaskDto): Observable<TaskListResponse> {
+  getTasksByProject(projectId: string, filter?: FilterTaskDto): Observable<ApiResponse<Task[]>> {
     let params = new HttpParams();
 
     if (filter) {
       if (filter.status) params = params.set('status', filter.status);
       if (filter.priority) params = params.set('priority', filter.priority);
       if (filter.assigneeId) params = params.set('assigneeId', filter.assigneeId);
+      if (filter.labelId) params = params.set('labelId', filter.labelId);
       if (filter.search) params = params.set('search', filter.search);
       if (filter.page) params = params.set('page', filter.page.toString());
       if (filter.limit) params = params.set('limit', filter.limit.toString());
     }
 
-    return this.http.get<TaskListResponse>(this.buildUrl(`/tasks/project/${projectId}`), {
+    return this.http.get<ApiResponse<Task[]>>(this.buildUrl(`/tasks/project/${projectId}`), {
       params,
     });
   }
@@ -185,7 +188,7 @@ export class TasksService extends BaseService {
   /**
    * Get all tasks assigned to the authenticated user
    */
-  getMyTasks(filter?: FilterTaskDto): Observable<TaskListResponse> {
+  getMyTasks(filter?: FilterTaskDto): Observable<Task[]> {
     let params = new HttpParams();
 
     if (filter) {
@@ -196,10 +199,12 @@ export class TasksService extends BaseService {
       if (filter.limit) params = params.set('limit', filter.limit.toString());
     }
 
-    return this.http.get<TaskListResponse>(this.buildUrl('/tasks/my-tasks'), {
+    return this.http.get<ApiResponse<Task[]>>(this.buildUrl('/tasks/my-tasks'), {
       params,
       withCredentials: true,
-    });
+    }).pipe(
+      map(response => response.data)
+    );
   }
 
   /**
@@ -253,7 +258,7 @@ export class TasksService extends BaseService {
   /**
    * Load tasks for a project and update signals
    */
-  loadTasksByProject(projectId: string, filter?: FilterTaskDto): Observable<TaskListResponse> {
+  loadTasksByProject(projectId: string, filter?: FilterTaskDto): Observable<ApiResponse<Task[]>> {
     this.loadingSignal.set(true);
     this.errorSignal.set(null);
     return this.getTasksByProject(projectId, filter).pipe(
@@ -272,12 +277,12 @@ export class TasksService extends BaseService {
   /**
    * Load user's assigned tasks and update signals
    */
-  loadMyTasks(filter?: FilterTaskDto): Observable<TaskListResponse> {
+  loadMyTasks(filter?: FilterTaskDto): Observable<Task[]> {
     this.loadingSignal.set(true);
     this.errorSignal.set(null);
     return this.getMyTasks(filter).pipe(
       tap((response) => {
-        this.tasksSignal.set(response.data);
+        this.tasksSignal.set(response);
         this.loadingSignal.set(false);
       }),
       catchError((error) => {
@@ -428,6 +433,13 @@ export class TasksService extends BaseService {
    */
   setAssigneeFilter(assigneeId: string | null): void {
     this.assigneeFilterSignal.set(assigneeId);
+  }
+
+  /**
+   * Set label filter
+   */
+  setLabelFilter(labelId: string | null): void {
+    this.labelFilterSignal.set(labelId);
   }
 
   /**
