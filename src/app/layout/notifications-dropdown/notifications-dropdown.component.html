@@ -35,15 +35,13 @@
         >
           <lucide-icon name="Settings" [size]="14"></lucide-icon>
         </button>
-        @if (hasUnreadNotifications()) {
         <button
           (click)="markAllAsRead()"
-          class="flex items-center gap-1 text-xs text-primary hover:underline"
+          class="p-1 rounded-md hover:bg-accent transition-colors"
+          title="Mark all as read"
         >
-          <lucide-icon name="check-check" [size]="14"></lucide-icon>
-          Mark all read
+          <lucide-icon name="CheckCheck" [size]="16"></lucide-icon>
         </button>
-        }
       </div>
     </div>
 

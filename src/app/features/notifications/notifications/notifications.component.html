@@ -19,15 +19,14 @@
         Filters
         <lucide-icon name="ChevronDown" [size]="14" [style.transform]="showFilters() ? 'rotate(180deg)' : 'rotate(0deg)'" class="transition-transform"></lucide-icon>
       </button>
-      @if (hasUnreadNotifications()) {
       <button
         (click)="markAllAsRead()"
-        class="flex items-center gap-2 px-3 py-2 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+        class="flex items-center gap-2 px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors shadow-sm"
+        title="Mark all notifications as read"
       >
         <lucide-icon name="CheckCheck" [size]="16"></lucide-icon>
-        Mark all read
+        Mark all as read
       </button>
-      }
     </div>
   </div>
 
