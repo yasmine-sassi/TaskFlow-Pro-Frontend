@@ -45,10 +45,10 @@
 
   <!-- Kanban Board -->
   @if (!isLoading()) {
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 h-[calc(100%-5rem)] overflow-x-auto">
+  <div class="board-grid grid grid-cols-1 md:grid-cols-3 gap-4 h-[calc(100%-5rem)]">
     @for (column of columns; track column.id) {
     <div
-      class="flex flex-col rounded-xl border-2 border-dashed p-4 transition-all duration-200 min-w-[300px]"
+      class="flex flex-col rounded-xl border-2 border-dashed p-4 transition-all duration-200 min-w-full md:min-w-[300px]"
       [ngClass]="[
         column.className,
         dragOverColumn() === column.id ? 'ring-2 ring-blue-500 ring-offset-2 border-blue-500' : ''

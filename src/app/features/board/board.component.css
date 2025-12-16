@@ -59,19 +59,10 @@
   transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
 }
 
-/* Mobile responsive adjustments */
+/* Mobile responsive adjustments: stack columns */
 @media (max-width: 768px) {
-  .grid {
+  .board-grid {
     grid-template-columns: 1fr;
-    overflow-x: auto;
-    overflow-y: hidden;
-    display: flex;
-    scroll-snap-type: x mandatory;
-  }
-
-  .grid > div {
-    scroll-snap-align: start;
-    flex: 0 0 90%;
   }
 }
 
