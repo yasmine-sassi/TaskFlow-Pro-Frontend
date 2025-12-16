@@ -28,6 +28,8 @@ import {
   CheckCheck,
   BellOff,
   X,
+  Edit,
+  CheckCircle,
 } from 'lucide-angular';
 
 // Import interceptors
@@ -77,6 +79,8 @@ export const appConfig: ApplicationConfig = {
         CheckCheck,
         BellOff,
         X,
+        Edit,
+        CheckCircle,
       })
     ),
     {
