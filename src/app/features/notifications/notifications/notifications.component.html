@@ -15,13 +15,9 @@
         (click)="toggleFilters()"
         class="flex items-center gap-2 px-3 py-2 text-sm rounded-md border border-border hover:bg-accent transition-colors"
       >
-        <lucide-icon name="Filter" [size]="16"></lucide-icon>
+        <lucide-icon name="Settings" [size]="16"></lucide-icon>
         Filters
-        @if (showFilters()) {
-        <lucide-icon name="ChevronUp" [size]="14"></lucide-icon>
-        } @else {
-        <lucide-icon name="ChevronDown" [size]="14"></lucide-icon>
-        }
+        <lucide-icon name="ChevronDown" [size]="14" [style.transform]="showFilters() ? 'rotate(180deg)' : 'rotate(0deg)'" class="transition-transform"></lucide-icon>
       </button>
       @if (hasUnreadNotifications()) {
       <button
@@ -103,7 +99,7 @@
   @if (loading()) {
   <div class="flex items-center justify-center py-12">
     <div class="flex items-center gap-3">
-      <lucide-icon name="RefreshCw" [size]="24" class="animate-spin text-muted-foreground"></lucide-icon>
+      <div class="w-6 h-6 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin mx-auto"></div>
       <p class="text-muted-foreground">Loading notifications...</p>
     </div>
   </div>
@@ -112,7 +108,7 @@
   <!-- Error State -->
   @else if (error()) {
   <div class="flex flex-col items-center justify-center py-12">
-    <lucide-icon name="AlertCircle" [size]="48" class="text-destructive mb-4"></lucide-icon>
+    <lucide-icon name="AlertTriangle" [size]="48" class="text-destructive mb-4"></lucide-icon>
     <h3 class="text-lg font-semibold text-foreground mb-2">Failed to load notifications</h3>
     <p class="text-muted-foreground text-center mb-4">{{ error() }}</p>
     <button
