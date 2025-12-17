@@ -202,6 +202,28 @@ export class TasksService extends BaseService {
   }
 
   /**
+   * Get all tasks in database (admin only)
+   */
+  getAllTasks(filter?: FilterTaskDto): Observable<Task[]> {
+    let params = new HttpParams();
+
+    if (filter) {
+      if (filter.status) params = params.set('status', filter.status);
+      if (filter.priority) params = params.set('priority', filter.priority);
+      if (filter.search) params = params.set('search', filter.search);
+      if (filter.page) params = params.set('page', filter.page.toString());
+      if (filter.limit) params = params.set('limit', filter.limit.toString());
+    }
+
+    return this.http
+      .get<TaskListResponse>(this.buildUrl('/tasks'), {
+        params,
+        withCredentials: true,
+      })
+      .pipe(map((response) => response.data));
+  }
+
+  /**
    * Get all tasks assigned to the authenticated user
    */
   getMyTasks(filter?: FilterTaskDto): Observable<Task[]> {

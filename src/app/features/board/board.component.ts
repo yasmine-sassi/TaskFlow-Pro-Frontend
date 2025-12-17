@@ -80,6 +80,9 @@ export class BoardComponent implements OnInit {
     return tasks.filter((task) => task.projectId === projectId);
   });
 
+  // Check if admin (admin can't drag/drop)
+  canDragDrop = computed(() => !this.isAdmin());
+
   // Group tasks by status
   getTasksByStatus(status: TaskStatus): Task[] {
     return this.filteredTasks().filter((task) => task.status === status);
@@ -171,12 +174,18 @@ export class BoardComponent implements OnInit {
   private loadTasks() {
     this.isLoading.set(true);
 
-    // Fetch all tasks assigned to the authenticated user
-    this.tasksService.getMyTasks().subscribe({
+    const isAdminUser = this.isAdmin();
+    const taskRequest = isAdminUser
+      ? this.tasksService.getAllTasks()
+      : this.tasksService.getMyTasks();
+
+    taskRequest.subscribe({
       next: (tasks) => {
         this.myTasks.set(tasks);
         this.isLoading.set(false);
-        console.log(`Loaded ${tasks.length} tasks assigned to user`);
+        const taskCount = tasks.length;
+        const taskType = isAdminUser ? 'all' : 'assigned';
+        console.log(`Loaded ${taskCount} ${taskType} tasks`);
       },
       error: (error) => {
         console.error('Failed to load tasks:', error);

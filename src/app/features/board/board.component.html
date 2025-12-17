@@ -56,7 +56,8 @@
       cdkDropList
       [id]="'column-' + column.id"
       [cdkDropListData]="getTasksByStatus(column.id)"
-      [cdkDropListConnectedTo]="columnIds()"
+      [cdkDropListConnectedTo]="canDragDrop() ? columnIds() : []"
+      [cdkDropListDisabled]="!canDragDrop()"
       (cdkDropListDropped)="onDrop($event, column.id)"
       (cdkDropListEntered)="onDragOver(column.id)"
       (cdkDropListExited)="onDragLeave()"
@@ -85,9 +86,10 @@
         <div
           cdkDrag
           [cdkDragData]="task"
+          [cdkDragDisabled]="!canDragDrop()"
           (cdkDragStarted)="onDragStart(task)"
           (cdkDragEnded)="onDragEnd()"
-          class="cursor-grab active:cursor-grabbing"
+          [ngClass]="canDragDrop() ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'"
         >
           <!-- Task Card Component -->
           <app-task-card
