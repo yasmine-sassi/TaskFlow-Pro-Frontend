@@ -120,6 +120,25 @@ export class UsersService extends BaseService {
       })
     );
   }
+  /**
+ * Delete a user (admin only)
+ * @param id - User ID to delete
+ * @returns Observable that completes when user is deleted
+ */
+deleteUser(id: string): Observable<{ message: string }> {
+  return this.http.delete<{ message: string }>(this.buildUrl(`/users/${id}`)).pipe(
+    tap(() => {
+      // Invalidate caches when a user is deleted
+      this.allUsersCache$ = null;
+      this.assignableUsersCache.clear();
+      this.logger.info(`User ${id} deleted, caches invalidated`);
+    }),
+    catchError((error) => {
+      this.logger.error('Error deleting user:', error);
+      return throwError(() => error);
+    })
+  );
+}
 
   /**
    * Clear cache (call on logout)
