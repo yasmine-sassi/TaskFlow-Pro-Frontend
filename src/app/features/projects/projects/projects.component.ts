@@ -74,35 +74,46 @@ export class ProjectsComponent {
       next: (projects) => {
         console.log('📦 Loaded projects:', projects.length);
         
-        // Fetch members for each project
+        // Fetch members and tasks for each project
         if (projects.length === 0) {
           this.projects.set([]);
           this.isLoading.set(false);
           return;
         }
 
-      const projectsWithMembers$ = projects.map((project) =>
-        this.projectsService.loadProjectMembers(project.id).pipe(
-          map(members => {
-            console.log(`👥 Members for ${project.name}:`, members.length, members);
-            return { ...project, members };
-          }),
-          catchError(() => {
-            console.warn(`Failed to load members for project ${project.id}`);
-            return of({ ...project, members: [] });
+      const projectsWithMembersAndTasks$ = projects.map((project) =>
+        forkJoin({
+          members: this.projectsService.loadProjectMembers(project.id).pipe(
+            catchError(() => {
+              console.warn(`Failed to load members for project ${project.id}`);
+              return of([]);
+            })
+          ),
+          tasks: this.tasksService.getTasksByProject(project.id).pipe(
+            map(response => response.data),
+            catchError(() => {
+              console.warn(`Failed to load tasks for project ${project.id}`);
+              return of([]);
+            })
+          )
+        }).pipe(
+          map(({ members, tasks }) => {
+            console.log(`👥 Members for ${project.name}:`, members.length);
+            console.log(`📋 Tasks for ${project.name}:`, tasks.length);
+            return { ...project, members, tasks };
           })
         )
       );
 
-        forkJoin(projectsWithMembers$).subscribe({
+        forkJoin(projectsWithMembersAndTasks$).subscribe({
           next: (enrichedProjects: any) => {
             console.log('✅ Enriched projects:', enrichedProjects);
             this.projects.set(this.filterVisibleProjects(enrichedProjects as Project[]));
             this.isLoading.set(false);
           },
           error: (err) => {
-            console.error('Failed to enrich projects with members:', err);
-            this.projects.set(this.filterVisibleProjects(projects)); // Fallback to projects without members
+            console.error('Failed to enrich projects with members and tasks:', err);
+            this.projects.set(this.filterVisibleProjects(projects)); // Fallback to projects without members/tasks
             this.isLoading.set(false);
           },
         });
