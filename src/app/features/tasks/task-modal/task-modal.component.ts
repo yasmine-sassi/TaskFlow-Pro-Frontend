@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, ViewChild, ElementRef, inject } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, OnChanges, SimpleChanges, ViewChild, ElementRef, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -48,13 +48,16 @@ export class TaskModalComponent implements OnInit, OnDestroy {
     status: TaskStatus.TODO,
     priority: TaskPriority.MEDIUM,
     dueDate: new Date(),
-    assigneeId: '1',
+    assigneesIds: [] as string[],
     projectId: '',
     subtasks: [] as Subtask[],
     labels: [] as Label[],
     comments: [] as Comment[],
     attachments: [] as Attachment[],
   };
+  
+  // Track deleted subtask IDs for backend synchronization
+  deletedSubtaskIds: Set<string> = new Set();
   
   errors: Record<string, string> = {};
   newSubtask = '';
@@ -72,9 +75,21 @@ export class TaskModalComponent implements OnInit, OnDestroy {
   availableLabels: Label[] = [];
   assignees: User[] = [];
   currentUser: User | null = null;
+  showAssigneeDropdown = signal(false);
   
   constructor() {}
   
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['open']?.currentValue && !changes['open'].previousValue) {
+      this.loadData();
+      this.resetForm();
+    }
+    if (changes['task'] && !changes['task'].firstChange) {
+      // Reset form when a new task is passed in
+      this.resetForm();
+    }
+  }
+
   ngOnInit() {
     this.loadData();
     this.resetForm();
@@ -119,16 +134,16 @@ export class TaskModalComponent implements OnInit, OnDestroy {
       // Load all users for admin
       this.usersService.getAllUsers().subscribe({
         next: (users) => {
-          this.assignees = users;
+          this.assignees = this.normalizeUsers(users);
         }
       });
     } else if (this.formData.projectId) {
       // Load assignable users for the project
       this.usersService.getAssignableUsers(this.formData.projectId).subscribe({
         next: (users) => {
-          this.assignees = users;
-          if (this.assignees.length > 0 && !this.formData.assigneeId) {
-            this.formData.assigneeId = this.assignees[0].id;
+          this.assignees = this.normalizeUsers(users);
+          if (this.assignees.length > 0 && !this.formData.assigneesIds.length) {
+            this.formData.assigneesIds = this.assignees.map(u => u.id);
           }
         }
       });
@@ -136,9 +151,13 @@ export class TaskModalComponent implements OnInit, OnDestroy {
       // Default to current user
       if (this.currentUser) {
         this.assignees = [this.currentUser];
-        this.formData.assigneeId = this.currentUser.id;
+        this.formData.assigneesIds = [this.currentUser.id];
       }
     }
+  }
+
+  private normalizeUsers(users: User[]): User[] {
+    return (users || []).filter(u => !!u && !!u.id);
   }
   
   resetForm() {
@@ -149,7 +168,7 @@ export class TaskModalComponent implements OnInit, OnDestroy {
         status: this.task.status,
         priority: this.task.priority,
         dueDate: this.task.dueDate || new Date(),
-        assigneeId: this.task.assignees && this.task.assignees.length > 0 ? this.task.assignees[0].id : (this.currentUser?.id || '1'),
+        assigneesIds: this.task.assignees && this.task.assignees.length > 0 ? this.task.assignees.map(a => a.id) : (this.currentUser ? [this.currentUser.id] : []),
         projectId: this.task.projectId,
         subtasks: [...(this.task.subtasks || [])],
         labels: [...(this.task.labels || [])],
@@ -166,7 +185,7 @@ export class TaskModalComponent implements OnInit, OnDestroy {
         status: TaskStatus.TODO,
         priority: TaskPriority.MEDIUM,
         dueDate: new Date(),
-        assigneeId: this.currentUser?.id || '1',
+        assigneesIds: this.currentUser ? [this.currentUser.id] : [],
         projectId: this.defaultProjectId || '',
         subtasks: [],
         labels: [],
@@ -177,6 +196,7 @@ export class TaskModalComponent implements OnInit, OnDestroy {
     this.errors = {};
     this.newSubtask = '';
     this.activeTab = 'details';
+    this.deletedSubtaskIds.clear();
   }
   
   onProjectChange() {
@@ -226,22 +246,43 @@ export class TaskModalComponent implements OnInit, OnDestroy {
       return;
     }
     
-    // Prepare task data
-    const taskData = {
-      title: this.formData.title,
-      description: this.formData.description,
-      status: this.formData.status,
-      priority: this.formData.priority,
-      dueDate: this.formData.dueDate,
-      projectId: this.formData.projectId,
-      labels: this.formData.labels,
-      subtasks: this.formData.subtasks,
-      comments: this.formData.comments,
-      attachments: this.formData.attachments,
-      assigneeIds: [this.formData.assigneeId] // Assuming single assignee for now
-    };
-    
+    // Prepare payloads per backend contract
+    const labelIds = (this.formData.labels || []).map(l => l.id).filter(Boolean);
+
     if (this.isEditing && this.task) {
+      // Prepare subtasks for update, including deleted ones
+      const subtasks = (this.formData.subtasks || []).map(st => ({
+        id: st.id,
+        title: st.title,
+        isComplete: st.isComplete,
+        position: st.position,
+      }));
+
+      // Add deleted subtasks with null title to indicate deletion
+      this.deletedSubtaskIds.forEach(id => {
+        subtasks.push({
+          id,
+          title: null as any,
+          isComplete: undefined as any,
+          position: undefined as any,
+        });
+      });
+
+      const taskData = {
+        status: this.formData.status,
+        subtasks: subtasks.length > 0 ? subtasks : undefined,
+        ...(!(
+          (this.task?.assignees || []).some(a => a.id === this.currentUser?.id) &&
+          this.currentUser?.role === 'USER'
+        ) && {
+          title: this.formData.title,
+          description: this.formData.description,
+          priority: this.formData.priority,
+          dueDate: this.formData.dueDate,
+          labelIds: labelIds.length > 0 ? labelIds : undefined,
+        }),
+      };
+
       this.tasksService.updateTask(this.task.id, taskData).subscribe({
         next: () => {
           this.openChange.emit(false);
@@ -252,7 +293,18 @@ export class TaskModalComponent implements OnInit, OnDestroy {
         }
       });
     } else {
-      this.tasksService.createTask(taskData).subscribe({
+      const createPayload = {
+        title: this.formData.title,
+        description: this.formData.description,
+        status: this.formData.status,
+        priority: this.formData.priority,
+        dueDate: this.formData.dueDate,
+        projectId: this.formData.projectId,
+        assigneeIds: this.formData.assigneesIds,
+        labelIds,
+      };
+
+      this.tasksService.createTask(createPayload as any).subscribe({
         next: () => {
           this.openChange.emit(false);
           this.resetForm();
@@ -308,6 +360,10 @@ export class TaskModalComponent implements OnInit, OnDestroy {
   }
   
   removeSubtask(id: string) {
+    // Track deletion if it's an existing subtask (has a real ID, not a temporary one)
+    if (id && !id.startsWith('st-')) {
+      this.deletedSubtaskIds.add(id);
+    }
     this.formData.subtasks = this.formData.subtasks.filter(s => s.id !== id);
   }
   
@@ -360,6 +416,32 @@ export class TaskModalComponent implements OnInit, OnDestroy {
   
   getAttachmentsCount(): number {
     return this.formData.attachments.length;
+  }
+
+  // Assignee selection helpers
+  toggleAssignee(userId: string) {
+    const current = new Set(this.formData.assigneesIds);
+    if (current.has(userId)) {
+      current.delete(userId);
+    } else {
+      current.add(userId);
+    }
+    this.formData.assigneesIds = Array.from(current);
+  }
+
+  isAssigneeSelected(userId: string): boolean {
+    return this.formData.assigneesIds.includes(userId);
+  }
+
+  getSelectedAssigneesCount(): number {
+    return this.formData.assigneesIds.length;
+  }
+
+  getAssigneeName(userId: string): string {
+    const user = this.assignees.find(u => u.id === userId);
+    if (!user) return 'User';
+    const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ').trim();
+    return fullName || user.email || 'User';
   }
   
 }

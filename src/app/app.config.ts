@@ -30,6 +30,8 @@ import {
   X,
   Edit,
   CheckCircle,
+  Plus,
+  Trash2,
 } from 'lucide-angular';
 
 // Import interceptors
@@ -81,6 +83,8 @@ export const appConfig: ApplicationConfig = {
         X,
         Edit,
         CheckCircle,
+        Plus,
+        Trash2,
       })
     ),
     {

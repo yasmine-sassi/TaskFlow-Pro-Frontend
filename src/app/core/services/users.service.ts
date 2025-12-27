@@ -1,6 +1,6 @@
 import { Injectable, signal, computed, effect, inject } from '@angular/core';
-import { Observable, tap, catchError, throwError } from 'rxjs';
-import { shareReplay, map } from 'rxjs/operators';
+import { Observable, tap, catchError, throwError, of } from 'rxjs';
+import { shareReplay, map, switchMap } from 'rxjs/operators';
 import { User } from '../models/user.model';
 import { BaseService } from './base.service';
 import { LoggerService } from './logger.service';
@@ -75,10 +75,38 @@ export class UsersService extends BaseService {
       const req$ = this.http
         .get<any>(this.buildUrl(`/projects/${projectId}/assignable-users`))
         .pipe(
-          map((res) => {
+          switchMap((res) => {
             console.log('🔍 getAssignableUsers raw response:', res);
-            return res.data || res || [];
+            const list = Array.isArray(res?.data)
+              ? res.data
+              : Array.isArray(res)
+                ? res
+                : [];
+
+            const normalized = list
+              .map((u: any) => ({ ...u, id: u?.id ?? u?.userId ?? '' }))
+              .filter((u: any) => !!u.id);
+
+            const hasUserDetails = normalized.some(
+              (u: any) => u.firstName || u.lastName || u.email
+            );
+
+            if (hasUserDetails) {
+              return of(this.dedupeById(normalized));
+            }
+
+            if (normalized.length === 0) {
+              console.warn('⚠️ assignable users payload is empty, returning []');
+              return of([] as User[]);
+            }
+
+            // Fallback: fetch all users and filter by returned ids
+            const ids = new Set(normalized.map((u: any) => u.id));
+            return this.getAllUsers().pipe(
+              map((all) => all.filter((u) => ids.has(u.id)))
+            );
           }),
+          map(users => this.dedupeById(users)),
           shareReplay(1),
           catchError((err) => {
             console.error('❌ getAssignableUsers error:', err);
@@ -90,6 +118,14 @@ export class UsersService extends BaseService {
       this.assignableUsersCache.set(projectId, req$);
     }
     return this.assignableUsersCache.get(projectId)!;
+  }
+
+  private dedupeById(users: User[]): User[] {
+    const mapById = new Map<string, User>();
+    users.forEach((u) => {
+      if (u.id) mapById.set(u.id, u);
+    });
+    return Array.from(mapById.values());
   }
 
   updateProfile(dto: UpdateProfileDto): Observable<User> {

@@ -86,6 +86,10 @@ export class DashboardComponent implements OnInit {
     }).pipe(
       map(({ projects, tasks }) => {
 
+        const filteredProjects = Array.isArray(projects)
+          ? projects.filter(p => !p.isArchived)
+          : [];
+
         // Calculate stats
         const stats = this.calculateStats(tasks);
         
@@ -106,7 +110,7 @@ export class DashboardComponent implements OnInit {
           })
           .slice(0, 3);
 
-        return { stats, recent, highPriority, projects: Array.isArray(projects) ? projects : [] };
+        return { stats, recent, highPriority, projects: filteredProjects };
       }),
       catchError(error => {
         console.error('Dashboard load error:', error);

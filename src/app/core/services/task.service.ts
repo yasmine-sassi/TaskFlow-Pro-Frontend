@@ -25,7 +25,7 @@ export interface UpdateTaskDto {
   priority?: TaskPriority;
   dueDate?: Date;
   position?: number;
-  labelId?: string;
+  labelIds?: string[];
 }
 
 export interface FilterTaskDto {
