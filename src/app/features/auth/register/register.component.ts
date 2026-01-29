@@ -1,15 +1,17 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { RegisterDto } from '../../../core/models/user.model';
+import { FormStateService } from '../../../core/services/form-state.service';
 import {
   matchPasswordValidator,
   noSpacesValidator,
   passwordStrengthValidator,
   UniqueEmailValidator,
 } from '../../../shared/validators';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-register',
@@ -23,6 +25,10 @@ export class RegisterComponent {
   private authService = inject(AuthService);
   private router = inject(Router);
   private uniqueEmailValidator = inject(UniqueEmailValidator);
+  private destroyRef = inject(DestroyRef);
+  private formState = inject(FormStateService);
+
+  private readonly draftKey = 'draft:register';
 
   isSubmitting = signal(false);
   errorMessage = signal<string>('');
@@ -62,6 +68,23 @@ export class RegisterComponent {
   get password() { return this.registerForm.get('password')!; }
   get confirmPassword() { return this.registerForm.get('confirmPassword')!; }
 
+  constructor() {
+    const saved = this.formState.restore<{
+      firstName: string;
+      lastName: string;
+      email: string;
+      password: string;
+      confirmPassword: string;
+    }>(this.draftKey);
+    if (saved) {
+      this.registerForm.patchValue(saved, { emitEvent: false });
+    }
+
+    this.registerForm.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.formState.save(this.draftKey, this.registerForm.getRawValue()));
+  }
+
   togglePasswordVisibility(field: 'password' | 'confirmPassword'): void {
     if (field === 'password') {
       this.passwordVisible.update((current) => !current);
@@ -82,7 +105,10 @@ export class RegisterComponent {
         password: password!,
       };
       this.authService.register(registerDto).subscribe({
-        next: () => this.router.navigate(['/dashboard']),
+        next: () => {
+          this.formState.clear(this.draftKey);
+          this.router.navigate(['/dashboard']);
+        },
         error: (error) => {
           this.errorMessage.set(error.message);
           this.isSubmitting.set(false);

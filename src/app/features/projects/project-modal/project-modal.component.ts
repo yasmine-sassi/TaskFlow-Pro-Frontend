@@ -1,12 +1,16 @@
-import { Component, Input, Output, EventEmitter, inject, signal, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, Input, Output, EventEmitter, inject, signal, OnChanges, SimpleChanges, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { forkJoin, of } from 'rxjs';
+import { map, catchError, debounceTime, distinctUntilChanged } from 'rxjs/operators';
+import { Observable } from 'rxjs';
 import { ProjectsService } from '../../../core/services/projects.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { UsersService } from '../../../core/services/users.service';
 import { Project, ProjectMemberRole } from '../../../core/models/project.model';
 import { User } from '../../../core/models/user.model';
+import { FormStateService } from '../../../core/services/form-state.service';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 interface ProjectFormDto {
   name: string;
@@ -35,6 +39,11 @@ export class ProjectModalComponent implements OnChanges {
   private projectsService = inject(ProjectsService);
   private usersService = inject(UsersService);
   private authService = inject(AuthService);
+  private formState = inject(FormStateService);
+  private destroyRef = inject(DestroyRef);
+
+  private draftKey = '';
+  private skipPersist = false;
 
   form: FormGroup;
   isSubmitting = signal(false);
@@ -51,43 +60,68 @@ export class ProjectModalComponent implements OnChanges {
 
   constructor() {
     this.form = this.fb.group({
-      name: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(50)]],
+      name: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(50)], [this.uniqueProjectNameValidator.bind(this)]],
       description: ['', [Validators.maxLength(500)]],
       color: ['#3B82F6'],
     });
+
+    this.form.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.saveDraft());
   }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['isOpen']) {
       const open = changes['isOpen'].currentValue;
       if (open) {
+        this.draftKey = this.buildDraftKey();
+        this.restoreDraft();
         this.loadUsers();
         // Prefill form when editing
-        if (this.isEditing && this.projectToEdit) {
+        if (this.isEditing && this.projectToEdit && !this.hasDraft()) {
           this.form.patchValue({
             name: this.projectToEdit.name,
             description: this.projectToEdit.description ?? '',
             color: this.projectToEdit.color ?? '#3B82F6',
-          });
+          }, { emitEvent: false });
           this.setSelectionsFromProject(this.projectToEdit);
         }
       }
       if (!open) {
-        this.form.reset({ color: '#3B82F6' });
+        this.skipPersist = true;
+        this.form.reset({ color: '#3B82F6' }, { emitEvent: false });
         this.selectedOwnerIds.set([]);
         this.selectedEditorIds.set([]);
         this.selectedViewerIds.set([]);
         this.availableUsers.set([]);
+        this.skipPersist = false;
+        // Note: Don't clear draft here - let user resume their work when reopening
+        // Draft will be cleared on successful submit or when switching modes
       }
     }
 
-    if (changes['projectToEdit'] && this.isOpen && this.projectToEdit) {
-      this.form.patchValue({
-        name: this.projectToEdit.name,
-        description: this.projectToEdit.description ?? '',
-        color: this.projectToEdit.color ?? '#3B82F6',
-      });
-      this.setSelectionsFromProject(this.projectToEdit);
+    if (changes['projectToEdit'] && this.isOpen) {
+      // Update draft key when edit mode changes
+      const oldDraftKey = this.draftKey;
+      this.draftKey = this.buildDraftKey();
+      
+      // Clear old draft if it's different from new draft (e.g., switching from edit Project ABC to create new)
+      if (oldDraftKey && oldDraftKey !== this.draftKey) {
+        this.formState.clear(oldDraftKey);
+      }
+      
+      // Restore draft for the new mode
+      this.restoreDraft();
+      
+      // Prefill form when editing and no saved draft exists
+      if (this.projectToEdit && !this.hasDraft()) {
+        this.form.patchValue({
+          name: this.projectToEdit.name,
+          description: this.projectToEdit.description ?? '',
+          color: this.projectToEdit.color ?? '#3B82F6',
+        }, { emitEvent: false });
+        this.setSelectionsFromProject(this.projectToEdit);
+      }
     }
   }
 
@@ -135,6 +169,7 @@ export class ProjectModalComponent implements OnChanges {
     } else {
       this.selectedOwnerIds.set([...current, userId]);
     }
+    this.saveDraft();
   }
 
   toggleEditor(userId: string) {
@@ -144,6 +179,7 @@ export class ProjectModalComponent implements OnChanges {
     } else {
       this.selectedEditorIds.set([...current, userId]);
     }
+    this.saveDraft();
   }
 
   toggleViewer(userId: string) {
@@ -153,6 +189,7 @@ export class ProjectModalComponent implements OnChanges {
     } else {
       this.selectedViewerIds.set([...current, userId]);
     }
+    this.saveDraft();
   }
 
   isOwnerSelected(userId: string): boolean {
@@ -168,6 +205,7 @@ export class ProjectModalComponent implements OnChanges {
   }
 
   private setSelectionsFromProject(project: Project) {
+    this.skipPersist = true;
     const members = project.members ?? [];
     const ownerIds = members
       .filter((m) => m.role === ProjectMemberRole.OWNER)
@@ -187,6 +225,7 @@ export class ProjectModalComponent implements OnChanges {
     this.selectedOwnerIds.set(ownerIds);
     this.selectedEditorIds.set(editorIds);
     this.selectedViewerIds.set(viewerIds);
+    this.skipPersist = false;
   }
 
   private buildDesiredRoles(ownerId: string, editors: string[], viewers: string[]) {
@@ -375,6 +414,7 @@ export class ProjectModalComponent implements OnChanges {
       this.projectsService.createProject(payload).subscribe({
         next: (newProject) => {
           this.projectCreated.emit(newProject);
+          this.formState.clear(this.draftKey);
           this.onClose();
         },
         error: (err) => {
@@ -388,5 +428,76 @@ export class ProjectModalComponent implements OnChanges {
   onClose() {
     this.isSubmitting.set(false);
     this.close.emit();
+  }
+
+  private buildDraftKey(): string {
+    const userId = this.authService.getCurrentUser()?.id ?? 'anonymous';
+    const scope = this.isEditing && this.projectToEdit ? `project-modal:${this.projectToEdit.id}` : 'project-modal:new';
+    return `draft:${scope}:${userId}`;
+  }
+
+  private hasDraft(): boolean {
+    return !!this.formState.restore(this.draftKey);
+  }
+
+  private restoreDraft(): void {
+    const saved = this.formState.restore<{
+      form: { name: string; description?: string; color?: string };
+      owners: string[];
+      editors: string[];
+      viewers: string[];
+    }>(this.draftKey);
+
+    if (!saved) return;
+    this.skipPersist = true;
+    this.form.patchValue(saved.form, { emitEvent: false });
+    this.selectedOwnerIds.set(saved.owners ?? []);
+    this.selectedEditorIds.set(saved.editors ?? []);
+    this.selectedViewerIds.set(saved.viewers ?? []);
+    this.skipPersist = false;
+  }
+
+  private saveDraft(): void {
+    if (this.skipPersist || !this.isOpen) return;
+    this.formState.save(this.draftKey, {
+      form: this.form.getRawValue(),
+      owners: this.selectedOwnerIds(),
+      editors: this.selectedEditorIds(),
+      viewers: this.selectedViewerIds(),
+    });
+  }
+
+  /**
+   * Async validator to check if project name is unique
+   * Calls the backend to verify no other project has the same name
+   */
+  private uniqueProjectNameValidator(control: AbstractControl): Observable<ValidationErrors | null> {
+    // If no value, skip validation
+    if (!control.value) {
+      return of(null);
+    }
+
+    const projectName = control.value.trim();
+
+    // If editing, don't validate against own name
+    if (this.isEditing && this.projectToEdit && this.projectToEdit.name === projectName) {
+      return of(null);
+    }
+
+    // Call backend to check if name exists, excluding current project if editing
+    const excludeProjectId = this.isEditing && this.projectToEdit ? this.projectToEdit.id : undefined;
+    return this.projectsService.checkProjectNameExists(projectName, excludeProjectId).pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      map((exists: boolean) => {
+        // If name exists, return validation error
+        return exists ? { uniqueProjectName: { value: projectName } } : null;
+      }),
+      catchError(() => {
+        // If API call fails, allow the submission to proceed
+        console.warn('Failed to validate project name uniqueness');
+        return of(null);
+      })
+    );
   }
 }

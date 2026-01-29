@@ -1,10 +1,12 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../../../core/services/auth.service';
 import { UsersService } from '../../../core/services/users.service';
 import { ProfileUpdateDto } from '../models/settings.model';
 import { User } from '../../../core/models/user.model';
+import { FormStateService } from '../../../core/services/form-state.service';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-profile',
@@ -17,6 +19,10 @@ export class ProfileComponent {
   private fb = inject(FormBuilder);
   private authService = inject(AuthService);
   private usersService = inject(UsersService);
+  private formState = inject(FormStateService);
+  private destroyRef = inject(DestroyRef);
+
+  private draftKey = '';
 
   currentUser = this.authService.currentUserSignal;
   profileForm: FormGroup;
@@ -33,8 +39,18 @@ export class ProfileComponent {
       email: [{value: '', disabled: true}], // Email is read-only
     });
 
-    // Load current user data
-    this.loadUserData();
+    this.draftKey = this.buildDraftKey('settings-profile');
+    const saved = this.formState.restore<{ firstName: string; lastName: string; email: string }>(this.draftKey);
+    if (saved) {
+      this.profileForm.patchValue(saved, { emitEvent: false });
+    } else {
+      // Load current user data
+      this.loadUserData();
+    }
+
+    this.profileForm.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.formState.save(this.draftKey, this.profileForm.getRawValue()));
   }
 
   private loadUserData() {
@@ -92,6 +108,7 @@ export class ProfileComponent {
       }
 
       this.successMessage.set('Profile updated successfully!');
+      this.formState.clear(this.draftKey);
     } catch (error: any) {
       console.error('Error updating profile:', error);
       const errorMessage = error?.error?.message || error?.message || 'Failed to update profile. Please try again.';
@@ -108,5 +125,10 @@ export class ProfileComponent {
       reader.onerror = reject;
       reader.readAsDataURL(file);
     });
+  }
+
+  private buildDraftKey(scope: 'settings-profile'): string {
+    const userId = this.authService.getCurrentUser()?.id ?? 'anonymous';
+    return `draft:${scope}:${userId}`;
   }
 }

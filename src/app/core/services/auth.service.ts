@@ -5,6 +5,8 @@ import { BehaviorSubject, Observable, tap } from 'rxjs';
 import { User, UserRole, AuthResponse, LoginDto, RegisterDto } from '../models/user.model';
 import { BaseService } from './base.service';
 import { WebSocketService } from './websocket.service';
+import { ProjectsService } from './projects.service';
+import { LabelsService } from './labels.service';
 
 @Injectable({
   providedIn: 'root',
@@ -12,6 +14,8 @@ import { WebSocketService } from './websocket.service';
 export class AuthService extends BaseService {
   private router = inject(Router);
   private webSocketService = inject(WebSocketService);
+  private projectsService = inject(ProjectsService);
+  private labelsService = inject(LabelsService);
 
   private currentUserSubject = new BehaviorSubject<User | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
@@ -127,6 +131,8 @@ export class AuthService extends BaseService {
     localStorage.removeItem('currentUser');
     this.currentUserSubject.next(null);
     this.currentUserSignal.set(null);
+    this.projectsService.clearState();
+    this.labelsService.clearState();
   }
 
   /**

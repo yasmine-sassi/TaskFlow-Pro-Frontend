@@ -24,7 +24,7 @@
     </div>
 
     <!-- Form -->
-    <form (ngSubmit)="onSubmit($event)" class="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
+    <form [formGroup]="taskForm" (ngSubmit)="onSubmit($event)" class="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
       <!-- Tabs -->
       <div class="mb-6">
         <div class="grid grid-cols-3 gap-2 border-b border-border">
@@ -34,7 +34,7 @@
             [class.border-primary]="activeTab === 'details'"
             [class.text-foreground]="activeTab === 'details'"
             [class.text-muted-foreground]="activeTab !== 'details'"
-            (click)="activeTab = 'details'"
+            (click)="setActiveTab('details')"
             class="py-2 text-sm font-medium text-center transition-colors hover:text-foreground"
           >
             Details
@@ -45,7 +45,7 @@
             [class.border-primary]="activeTab === 'comments'"
             [class.text-foreground]="activeTab === 'comments'"
             [class.text-muted-foreground]="activeTab !== 'comments'"
-            (click)="activeTab = 'comments'"
+            (click)="setActiveTab('comments')"
             class="py-2 text-sm font-medium text-center transition-colors hover:text-foreground"
           >
             Comments {{ getCommentsCount() > 0 ? '(' + getCommentsCount() + ')' : '' }}
@@ -56,7 +56,7 @@
             [class.border-primary]="activeTab === 'attachments'"
             [class.text-foreground]="activeTab === 'attachments'"
             [class.text-muted-foreground]="activeTab !== 'attachments'"
-            (click)="activeTab = 'attachments'"
+            (click)="setActiveTab('attachments')"
             class="py-2 text-sm font-medium text-center transition-colors hover:text-foreground"
           >
             Attachments {{ getAttachmentsCount() > 0 ? '(' + getAttachmentsCount() + ')' : '' }}
@@ -73,17 +73,18 @@
             Title <span class="text-destructive">*</span>
           </label>
           <input
-            #titleInput
             id="title"
             type="text"
-            [(ngModel)]="formData.title"
-            name="title"
+            formControlName="title"
             placeholder="Enter task title"
             class="w-full px-3 py-2 text-sm rounded-md bg-background border border-input text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            [class.border-destructive]="errors['title']"
+            [class.border-destructive]="showTitleError"
           />
-          @if (errors['title']) {
-          <p class="text-xs text-destructive mt-1">{{ errors['title'] }}</p>
+          @if (showTitleError) {
+            <p class="text-xs text-destructive mt-1">
+              @if (titleControl.errors?.['required']) { <span>Title is required</span> }
+              @if (titleControl.errors?.['maxLength']) { <span>Title must be less than 100 characters</span> }
+            </p>
           }
         </div>
 
@@ -93,21 +94,17 @@
             Project <span class="text-destructive">*</span>
           </label>
           <select
-            [(ngModel)]="formData.projectId"
-            name="projectId"
-            (change)="onProjectChange()"
+            formControlName="projectId"
             class="w-full px-3 py-2 text-sm rounded-md bg-background border border-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            [class.border-destructive]="errors['projectId']"
+            [class.border-destructive]="showProjectError"
           >
-            <option value="" disabled selected>Select a project</option>
+            <option value="" disabled>Select a project</option>
             @for (project of availableProjects; track project.id) {
-            <option [value]="project.id">
-              {{ project.name }}
-            </option>
+            <option [value]="project.id">{{ project.name }}</option>
             }
           </select>
-          @if (errors['projectId']) {
-          <p class="text-xs text-destructive mt-1">{{ errors['projectId'] }}</p>
+          @if (showProjectError) {
+          <p class="text-xs text-destructive mt-1">Project is required</p>
           }
         </div>
 
@@ -118,7 +115,9 @@
           </label>
           <app-label-select
             [availableLabels]="availableLabels"
-            [selectedLabels]="formData.labels"
+            [selectedLabels]="labelsControl.value"
+            (labelsChange)="onLabelsChange($event)"
+            (createLabel)="onCreateLabel($event)"
           ></app-label-select>
         </div>
 
@@ -129,8 +128,7 @@
           </label>
           <textarea
             id="description"
-            [(ngModel)]="formData.description"
-            name="description"
+            formControlName="description"
             rows="3"
             placeholder="Add a description..."
             class="w-full px-3 py-2 text-sm rounded-md bg-background border border-input text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
@@ -144,8 +142,7 @@
               Status
             </label>
             <select
-              [(ngModel)]="formData.status"
-              name="status"
+              formControlName="status"
               class="w-full px-3 py-2 text-sm rounded-md bg-background border border-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <option [value]="TaskStatus.TODO">To Do</option>
@@ -159,8 +156,7 @@
               Priority
             </label>
             <select
-              [(ngModel)]="formData.priority"
-              name="priority"
+              formControlName="priority"
               class="w-full px-3 py-2 text-sm rounded-md bg-background border border-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <option [value]="TaskPriority.LOW">Low</option>
@@ -170,95 +166,106 @@
           </div>
         </div>
 
-        <!-- Due Date & Assignees -->
+        <!-- Start & Due Dates -->
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label class="block text-sm font-medium text-foreground mb-1.5">
-              Due Date
+              Start Date
             </label>
-            <div class="relative">
-              <input
-                type="date"
-                [ngModel]="formatDate(formData.dueDate)"
-                (ngModelChange)="formData.dueDate = parseDate($event)"
-                name="dueDate"
-                class="w-full px-3 py-2 text-sm rounded-md bg-background border border-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-
-            </div>
+            <input
+              type="date"
+              formControlName="startDate"
+              class="w-full px-3 py-2 text-sm rounded-md bg-background border border-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            />
           </div>
 
           <div>
             <label class="block text-sm font-medium text-foreground mb-1.5">
-              Assignees
+              Due Date
             </label>
-            <div class="relative">
-              <button
-                type="button"
-                (click)="showAssigneeDropdown.set(!showAssigneeDropdown())"
-                class="w-full px-3 py-2 text-sm text-left rounded-md bg-background border border-input text-foreground hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring flex items-center justify-between"
-              >
-                <div class="flex flex-wrap gap-2 items-center">
-                  @if (getSelectedAssigneesCount() === 0) {
-                    <span class="text-muted-foreground">Select assignees...</span>
-                  } @else {
-                    <span class="text-muted-foreground">{{ getSelectedAssigneesCount() }} selected</span>
-                    <div class="flex flex-wrap gap-1">
-                      @for (userId of formData.assigneesIds; track userId) {
-                      <span class="px-2 py-0.5 rounded-full bg-muted text-xs text-foreground">{{ getAssigneeName(userId) }}</span>
-                      }
-                    </div>
-                  }
-                </div>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  class="transition-transform"
-                  [class.rotate-180]="showAssigneeDropdown()"
-                >
-                  <polyline points="6 9 12 15 18 9"></polyline>
-                </svg>
-              </button>
+            <input
+              type="date"
+              formControlName="dueDate"
+              class="w-full px-3 py-2 text-sm rounded-md bg-background border border-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            @if (showDateRangeError) {
+            <p class="text-xs text-destructive mt-1">Start date must be before due date</p>
+            }
+          </div>
+        </div>
 
-              @if (showAssigneeDropdown()) {
-              <div class="absolute z-10 w-full mt-1 bg-card border border-border rounded-md shadow-lg max-h-56 overflow-auto">
-                @if (!assignees || assignees.length === 0) {
-                <div class="px-3 py-2 text-sm text-muted-foreground">No users available</div>
+        <!-- Assignees -->
+        <div>
+          <label class="block text-sm font-medium text-foreground mb-1.5">
+            Assignees
+          </label>
+          <div class="relative">
+            <button
+              type="button"
+              (click)="showAssigneeDropdown.set(!showAssigneeDropdown())"
+              [disabled]="assigneesIdsControl.disabled"
+              class="w-full px-3 py-2 text-sm text-left rounded-md bg-background border border-input text-foreground hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring flex items-center justify-between disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-background"
+            >
+              <div class="flex flex-wrap gap-2 items-center">
+                @if (getSelectedAssigneesCount() === 0) {
+                  <span class="text-muted-foreground">Select assignees...</span>
                 } @else {
-                  @for (user of assignees; track user.id) {
-                  <label
-                    class="flex items-center px-3 py-2 hover:bg-muted cursor-pointer transition-colors"
-                  >
-                    <input
-                      type="checkbox"
-                      [checked]="isAssigneeSelected(user.id)"
-                      (change)="toggleAssignee(user.id)"
-                      class="mr-3 rounded border-input text-primary focus:ring-2 focus:ring-ring"
-                    />
-                    <div class="flex-1">
-                      <div class="text-sm font-medium text-foreground">
-                        {{ user.firstName }} {{ user.lastName }}
-                      </div>
-                      <div class="text-xs text-muted-foreground">{{ user.email }}</div>
-                    </div>
-                    @if (isAssigneeSelected(user.id)) {
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary">
-                      <polyline points="20 6 9 17 4 12"></polyline>
-                    </svg>
+                  <span class="text-muted-foreground">{{ getSelectedAssigneesCount() }} selected</span>
+                  <div class="flex flex-wrap gap-1">
+                    @for (userId of assigneesIdsControl.value; track userId) {
+                    <span class="px-2 py-0.5 rounded-full bg-muted text-xs text-foreground">{{ getAssigneeName(userId) }}</span>
                     }
-                  </label>
-                  }
+                  </div>
                 }
               </div>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="transition-transform"
+                [class.rotate-180]="showAssigneeDropdown()"
+              >
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+
+            @if (showAssigneeDropdown()) {
+            <div class="absolute z-10 w-full mt-1 bg-card border border-border rounded-md shadow-lg max-h-56 overflow-auto">
+              @if (!assignees || assignees.length === 0) {
+              <div class="px-3 py-2 text-sm text-muted-foreground">No users available</div>
+              } @else {
+                @for (user of assignees; track user.id) {
+                <label
+                  class="flex items-center px-3 py-2 hover:bg-muted cursor-pointer transition-colors"
+                >
+                  <input
+                    type="checkbox"
+                    [checked]="isAssigneeSelected(user.id)"
+                    (change)="toggleAssignee(user.id)"
+                    class="mr-3 rounded border-input text-primary focus:ring-2 focus:ring-ring"
+                  />
+                  <div class="flex-1">
+                    <div class="text-sm font-medium text-foreground">
+                      {{ user.firstName }} {{ user.lastName }}
+                    </div>
+                    <div class="text-xs text-muted-foreground">{{ user.email }}</div>
+                  </div>
+                  @if (isAssigneeSelected(user.id)) {
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                  }
+                </label>
+                }
               }
             </div>
+            }
           </div>
         </div>
 
@@ -270,10 +277,9 @@
           <div class="flex gap-2 mb-2">
             <input
               type="text"
-              [(ngModel)]="newSubtask"
-              name="newSubtask"
+              formControlName="newSubtask"
               placeholder="Add a subtask..."
-              (keydown)="onKeyDown($event)"
+              (keydown.enter)="addSubtask()"
               class="flex-1 px-3 py-2 text-sm rounded-md bg-background border border-input text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
             <button
@@ -285,9 +291,9 @@
             </button>
           </div>
 
-          @if (formData.subtasks.length > 0) {
+          @if (subtasks.length > 0) {
           <div class="space-y-2 rounded-lg border border-border p-3">
-            @for (subtask of formData.subtasks; track subtask.id) {
+            @for (subtask of subtasks; track subtask.id) {
             <div class="flex items-center gap-2 group">
               <input
                 type="checkbox"
@@ -321,7 +327,7 @@
       @if (activeTab === 'comments') {
       <div class="space-y-4">
         <app-comment-section
-          [comments]="formData.comments"
+          [comments]="comments"
           [availableUsers]="assignees"
           [currentUserId]="currentUser?.id || ''"
           (addComment)="onAddComment($event)"
@@ -333,7 +339,7 @@
       @if (activeTab === 'attachments') {
       <div class="space-y-4">
         <app-attachment-section
-          [attachments]="formData.attachments"
+          [attachments]="attachments"
           (addAttachment)="onAddAttachment($event)"
           (removeAttachment)="onRemoveAttachment($event)"
         ></app-attachment-section>
@@ -365,7 +371,8 @@
           </button>
           <button
             type="submit"
-            class="px-4 py-2 text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 rounded-md transition-colors"
+            [disabled]="taskForm.invalid"
+            class="px-4 py-2 text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed rounded-md transition-colors"
           >
             {{ isEditing ? 'Save Changes' : 'Create Task' }}
           </button>

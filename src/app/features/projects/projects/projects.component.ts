@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, effect } from '@angular/core';
+import { Component, inject, signal, computed, effect, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { forkJoin, of } from 'rxjs';
@@ -60,11 +60,15 @@ export class ProjectsComponent {
   });
 
   constructor() {
-
-    
-    // Load projects on init
+    // Load projects when the current user is available.
+    // Use untracked() to avoid re-running due to service cache updates.
     effect(() => {
-      this.loadProjects();
+      const userId = this.currentUser()?.id;
+      if (!userId) {
+        this.projects.set([]);
+        return;
+      }
+      untracked(() => this.loadProjects());
     });
   }
 
@@ -175,6 +179,11 @@ export class ProjectsComponent {
       return;
     }
     this.selectedProject.set(project);
+    this.showModal.set(true);
+  }
+
+  onCreateNewProject() {
+    this.selectedProject.set(null);
     this.showModal.set(true);
   }
 

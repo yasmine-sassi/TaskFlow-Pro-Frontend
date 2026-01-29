@@ -1,5 +1,5 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
-import { Observable, tap, catchError, throwError, map } from 'rxjs';
+import { Observable, tap, catchError, throwError, map, of } from 'rxjs';
 import { Project, ProjectMember, ProjectMemberRole } from '../models/project.model';
 import { BaseService } from './base.service';
 import { LoggerService } from './logger.service';
@@ -395,6 +395,23 @@ export class ProjectsService extends BaseService {
    */
   isProjectOwner(project: Project, currentUserId: string): boolean {
     return project.ownerId === currentUserId;
+  }
+
+  /**
+   * Check if a project name already exists (excluding optional projectId)
+   */
+  checkProjectNameExists(projectName: string, excludeProjectId?: string): Observable<boolean> {
+    return this.http.get<ApiResponse<boolean>>(
+      this.buildUrl(`/projects/check-name/${encodeURIComponent(projectName)}`),
+      { params: excludeProjectId ? { excludeId: excludeProjectId } : {} }
+    ).pipe(
+      map(response => response.data ?? false),
+      catchError((error) => {
+        this.logger.error('Failed to check project name existence: ' + error.message);
+        // Return false on error to allow user to proceed (fail gracefully)
+        return of(false);
+      })
+    );
   }
 
   /**

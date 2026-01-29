@@ -58,14 +58,6 @@ export const routes: Routes = [
             resolve: { projects: projectsResolver },
           },
           {
-            path: 'new',
-            loadComponent: () =>
-              import('./features/projects/project-form/project-form.component').then(
-                (m) => m.ProjectFormComponent
-              ),
-            data: { title: 'Create Project' },
-          },
-          {
             path: ':projectId',
             canActivate: [projectMemberGuard],
             children: [
@@ -93,22 +85,6 @@ export const routes: Routes = [
               import('./features/tasks/tasks/tasks.component').then((m) => m.TasksComponent),
             data: { title: 'My Tasks' },
             resolve: { tasks: tasksResolver },
-          },
-          {
-            path: 'new',
-            loadComponent: () =>
-              import('./features/tasks/task-form/task-form.component').then(
-                (m) => m.TaskFormComponent
-              ),
-            data: { title: 'Create Task' },
-          },
-          {
-            path: 'new',
-            loadComponent: () =>
-              import('./features/tasks/task-form/task-form.component').then(
-                (m) => m.TaskFormComponent
-              ),
-            data: { title: 'Create Task' },
           },
         ],
       },

@@ -1,6 +1,6 @@
 import { Injectable, signal, computed, effect, inject } from '@angular/core';
 import { HttpParams } from '@angular/common/http';
-import { Observable, tap, catchError, throwError, map } from 'rxjs';
+import { Observable, tap, catchError, throwError, map, of } from 'rxjs';
 import { Task, TaskStatus, TaskPriority } from '../models/task.model';
 import { BaseService } from './base.service';
 import { LoggerService } from './logger.service';
@@ -491,6 +491,23 @@ export class TasksService extends BaseService {
     this.priorityFilterSignal.set(null);
     this.assigneeFilterSignal.set(null);
     this.searchFilterSignal.set('');
+  }
+
+  /**
+   * Check if a task title already exists (excluding optional taskId)
+   */
+  isTitleTaken(title: string, excludeTaskId?: string): Observable<boolean> {
+    return this.http.get<ApiResponse<boolean>>(
+      this.buildUrl(`/tasks/check-title/${encodeURIComponent(title)}`),
+      { params: excludeTaskId ? { excludeId: excludeTaskId } : {} }
+    ).pipe(
+      map(response => response.data ?? false),
+      catchError((error) => {
+        this.logger.error('Failed to check task title: ' + error.message);
+        // Return false on error to allow user to proceed (fail gracefully)
+        return of(false);
+      })
+    );
   }
 
   /**
