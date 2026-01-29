@@ -39,7 +39,7 @@ export class SidebarComponent {
 
   get bottomNavItems() {
     return [
-      { path: '/search', label: 'Search', icon: 'Search' },
+      { path: '/search', label: 'My Workspace', icon: 'Search' },
       {
         path: '/notifications',
         label: 'Notifications',
