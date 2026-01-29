@@ -1,0 +1,216 @@
+<div class="min-h-screen bg-background p-6">
+  <div class="max-w-4xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-foreground mb-2">Search</h1>
+      <p class="text-muted-foreground">Search across all your projects, tasks, and comments</p>
+    </div>
+
+    <!-- Search Input -->
+    <div class="mb-6">
+      <div class="relative">
+        <lucide-icon 
+          name="Search" 
+          [size]="20" 
+          class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+        ></lucide-icon>
+        <input
+          type="text"
+          [formControl]="searchControl"
+          placeholder="Type to search... (min 2 characters)"
+          class="w-full pl-10 pr-4 py-3 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          autofocus
+          aria-label="Search input"
+        />
+        @if (searchControl.value && searchControl.value.length > 0) {
+        <button
+          (click)="searchControl.setValue('')"
+          class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          aria-label="Clear search"
+          type="button"
+        >
+          <lucide-icon name="x" [size]="20"></lucide-icon>
+        </button>
+        }
+      </div>
+      
+      <!-- Results Count -->
+      @if (hasSearched() && !isLoading()) {
+      <div class="mt-2 text-sm text-muted-foreground">
+        Found {{ totalResults }} result{{ totalResults !== 1 ? 's' : '' }}
+      </div>
+      }
+    </div>
+
+    <!-- Loading State -->
+    @if (isLoading()) {
+    <div class="text-center py-12" role="status" aria-live="polite">
+      <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+      <p class="text-muted-foreground">Searching...</p>
+    </div>
+    }
+
+    <!-- Error State -->
+    @else if (error()) {
+    <div class="bg-destructive/10 border border-destructive/20 rounded-lg p-6 text-center" role="alert">
+      <lucide-icon name="alert-circle" [size]="48" class="mx-auto text-destructive mb-3"></lucide-icon>
+      <p class="text-destructive font-medium">{{ error() }}</p>
+    </div>
+    }
+
+    <!-- Empty State (No search yet) -->
+    @else if (showEmptyState) {
+    <div class="text-center py-16">
+      <lucide-icon name="Search" [size]="64" class="mx-auto text-muted-foreground/30 mb-4"></lucide-icon>
+      <h3 class="text-xl font-semibold text-foreground mb-2">Start Searching</h3>
+      <p class="text-muted-foreground">Enter at least 2 characters to search</p>
+    </div>
+    }
+
+    <!-- No Results State -->
+    @else if (showNoResults) {
+    <div class="text-center py-16">
+      <lucide-icon name="file-search" [size]="64" class="mx-auto text-muted-foreground/30 mb-4"></lucide-icon>
+      <h3 class="text-xl font-semibold text-foreground mb-2">No Results Found</h3>
+      <p class="text-muted-foreground">Try adjusting your search terms</p>
+    </div>
+    }
+
+    <!-- Results -->
+    @else if (hasResults) {
+    <div class="space-y-6">
+      <!-- Projects Results -->
+      @if (projects().length > 0) {
+      <div>
+        <h2 class="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+          <lucide-icon name="folder-open" [size]="20"></lucide-icon>
+          Projects ({{ projects().length }})
+        </h2>
+        <div class="grid gap-3">
+          @for (project of projects(); track project.id) {
+          <button
+            (click)="navigateToProject(project)"
+            class="w-full text-left p-4 rounded-lg border border-border bg-card hover:bg-accent transition-colors"
+          >
+            <div class="flex items-start gap-3">
+              <div class="flex-shrink-0 mt-1">
+                <div 
+                  class="w-3 h-3 rounded-full" 
+                  [style.backgroundColor]="project.color || '#6366f1'"
+                ></div>
+              </div>
+              <div class="flex-1 min-w-0">
+                <h3 class="font-medium text-foreground mb-1">{{ project.name }}</h3>
+                @if (project.description) {
+                <p class="text-sm text-muted-foreground line-clamp-2">{{ project.description }}</p>
+                }
+                <div class="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                  @if (project.isArchived) {
+                  <span class="px-2 py-1 rounded bg-muted">Archived</span>
+                  }
+                </div>
+              </div>
+            </div>
+          </button>
+          }
+        </div>
+      </div>
+      }
+
+      <!-- Tasks Results -->
+      @if (tasks().length > 0) {
+      <div>
+        <h2 class="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+          <lucide-icon name="file-text" [size]="20"></lucide-icon>
+          Tasks ({{ tasks().length }})
+        </h2>
+        <div class="grid gap-3">
+          @for (task of tasks(); track task.id) {
+          <button
+            (click)="navigateToTask(task)"
+            class="w-full text-left p-4 rounded-lg border border-border bg-card hover:bg-accent transition-colors"
+          >
+            <div class="flex items-start gap-3">
+              <lucide-icon name="check-circle" [size]="20" class="flex-shrink-0 mt-1 text-muted-foreground"></lucide-icon>
+              <div class="flex-1 min-w-0">
+                <h3 class="font-medium text-foreground mb-1">{{ task.title }}</h3>
+                @if (task.description) {
+                <p class="text-sm text-muted-foreground line-clamp-2 mb-2">{{ task.description }}</p>
+                }
+                <div class="flex flex-wrap items-center gap-2">
+                  @if (task.status) {
+                  <span class="text-xs px-2 py-1 rounded bg-secondary text-secondary-foreground">
+                    {{ task.status }}
+                  </span>
+                  }
+                  @if (task.priority) {
+                  <span 
+                    class="text-xs px-2 py-1 rounded font-medium"
+                    [ngClass]="{
+                      'bg-red-500/10 text-red-600 dark:text-red-400': task.priority === 'HIGH' || task.priority === 'URGENT',
+                      'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400': task.priority === 'MEDIUM',
+                      'bg-blue-500/10 text-blue-600 dark:text-blue-400': task.priority === 'LOW'
+                    }"
+                  >
+                    {{ task.priority }}
+                  </span>
+                  }
+                  @if (task.dueDate) {
+                  <span class="text-xs text-muted-foreground flex items-center gap-1">
+                    <lucide-icon name="calendar" [size]="14"></lucide-icon>
+                    {{ task.dueDate | date: 'MMM d, y' }}
+                  </span>
+                  }
+                </div>
+              </div>
+            </div>
+          </button>
+          }
+        </div>
+      </div>
+      }
+
+      <!-- Comments Results -->
+      @if (comments().length > 0) {
+      <div>
+        <h2 class="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+          <lucide-icon name="message-square" [size]="20"></lucide-icon>
+          Comments ({{ comments().length }})
+        </h2>
+        <div class="grid gap-3">
+          @for (comment of comments(); track comment.id) {
+          <button
+            (click)="navigateToComment(comment)"
+            class="w-full text-left p-4 rounded-lg border border-border bg-card hover:bg-accent transition-colors"
+          >
+            <div class="flex items-start gap-3">
+              <lucide-icon name="message-square" [size]="20" class="flex-shrink-0 mt-1 text-muted-foreground"></lucide-icon>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-2">
+                  @if (comment.user) {
+                  <span class="text-sm font-medium text-foreground">
+                    {{ comment.user.firstName }} {{ comment.user.lastName }}
+                  </span>
+                  } @else if (comment.userName) {
+                  <span class="text-sm font-medium text-foreground">{{ comment.userName }}</span>
+                  } @else {
+                  <span class="text-sm font-medium text-muted-foreground">Unknown User</span>
+                  }
+                  @if (comment.createdAt) {
+                  <span class="text-xs text-muted-foreground">
+                    {{ comment.createdAt | date: 'MMM d, y' }}
+                  </span>
+                  }
+                </div>
+                <p class="text-sm text-muted-foreground line-clamp-3">{{ comment.content }}</p>
+              </div>
+            </div>
+          </button>
+          }
+        </div>
+      </div>
+      }
+    </div>
+    }
+  </div>
+</div>

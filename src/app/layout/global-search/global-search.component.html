@@ -1,21 +1,31 @@
-<div class="relative">
+<div class="relative" role="search">
   <div
     (click)="openSearch()"
     class="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-background cursor-pointer transition-all"
     [ngClass]="isOpen() ? 'ring-2 ring-ring w-80' : 'w-64 hover:border-muted-foreground/40'"
+    [attr.aria-expanded]="isOpen()"
+    [attr.aria-label]="'Global search'"
   >
     <lucide-icon name="Search" [size]="16" class="text-muted-foreground"></lucide-icon>
     @if (isOpen()) {
     <input
       type="text"
-      [(ngModel)]="query"
-      (ngModelChange)="onQueryChange($event)"
-      placeholder="Search tasks, projects..."
+      [formControl]="searchControl"
+      placeholder="Search tasks, projects, comments..."
       class="border-0 p-0 h-auto focus:outline-none focus:ring-0 bg-transparent w-full"
+      aria-label="Search input"
+      aria-autocomplete="list"
+      [attr.aria-controls]="showDropdown ? 'search-results' : null"
+      autocomplete="off"
       autofocus
     />
-    @if (query()) {
-    <button (click)="closeSearch()" class="ml-auto">
+    @if (searchControl.value && searchControl.value.length > 0) {
+    <button 
+      (click)="closeSearch()" 
+      class="ml-auto"
+      aria-label="Clear search"
+      type="button"
+    >
       <lucide-icon
         name="x"
         [size]="16"
@@ -26,49 +36,137 @@
     <span class="text-sm text-muted-foreground">Search tasks, projects...</span>
     <kbd
       class="ml-auto pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border border-border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground"
+      aria-label="Keyboard shortcut: Command K or Control K"
     >
       <span class="text-xs">⌘</span>K
     </kbd>
     }
   </div>
 
-  @if (isOpen() && query().length > 1) {
+  @if (showDropdown) {
   <div
-    class="absolute top-full mt-2 w-80 rounded-lg border border-border bg-popover shadow-lg max-h-96 overflow-y-auto"
+    id="search-results"
+    class="absolute top-full mt-2 w-80 rounded-lg border border-border bg-popover shadow-lg max-h-96 overflow-y-auto z-50"
+    role="listbox"
+    aria-label="Search results"
   >
-    @if (hasResults) {
-    <!-- Projects Results -->
-    @if (projects.length > 0) {
-    <div class="p-2">
-      <p class="px-2 py-1.5 text-xs font-medium text-muted-foreground">Projects</p>
-      @for (project of projects; track project.id) {
-      <button
-        (click)="selectProject(project.id)"
-        class="flex w-full items-center gap-2 rounded-sm px-2 py-2 text-sm hover:bg-accent transition-colors"
-      >
-        <lucide-icon name="folder-open" [size]="16" class="text-muted-foreground"></lucide-icon>
-        <span>{{ project.name }}</span>
-      </button>
-      }
+    <!-- Loading State -->
+    @if (isLoading()) {
+    <div class="p-8 text-center" role="status" aria-live="polite">
+      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <p class="mt-2 text-sm text-muted-foreground">Searching...</p>
     </div>
     }
 
-    <!-- Tasks Results -->
-    @if (tasks.length > 0) {
-    <div class="p-2 border-t border-border">
-      <p class="px-2 py-1.5 text-xs font-medium text-muted-foreground">Tasks</p>
-      @for (task of tasks; track task.id) {
-      <button
-        (click)="selectTask(task.id)"
-        class="flex w-full items-center gap-2 rounded-sm px-2 py-2 text-sm hover:bg-accent transition-colors"
-      >
-        <lucide-icon name="file-text" [size]="16" class="text-muted-foreground"></lucide-icon>
-        <span>{{ task.title }}</span>
-      </button>
-      }
+    <!-- Error State -->
+    @else if (error()) {
+    <div class="p-8 text-center" role="alert" aria-live="assertive">
+      <lucide-icon name="alert-circle" [size]="32" class="mx-auto text-destructive"></lucide-icon>
+      <p class="mt-2 text-sm text-destructive">{{ error() }}</p>
     </div>
-    } } @else {
-    <div class="p-8 text-center">
+    }
+
+    <!-- Results -->
+    @else if (hasResults) {
+      <!-- Projects Results -->
+      @if (projects().length > 0) {
+      <div class="p-2">
+        <p class="px-2 py-1.5 text-xs font-medium text-muted-foreground" role="presentation">Projects</p>
+        @for (project of projects(); track project.id) {
+        <button
+          (click)="selectProject(project)"
+          class="flex w-full items-center gap-2 rounded-sm px-2 py-2 text-sm hover:bg-accent transition-colors text-left"
+          role="option"
+          [attr.aria-label]="'Navigate to project: ' + project.name"
+          type="button"
+        >
+          <lucide-icon name="folder-open" [size]="16" class="text-muted-foreground flex-shrink-0"></lucide-icon>
+          <div class="flex-1 min-w-0">
+            <p class="truncate font-medium">{{ project.name }}</p>
+            @if (project.description) {
+            <p class="text-xs text-muted-foreground truncate">{{ project.description }}</p>
+            }
+          </div>
+        </button>
+        }
+      </div>
+      }
+
+      <!-- Tasks Results -->
+      @if (tasks().length > 0) {
+      <div class="p-2" [ngClass]="{'border-t border-border': projects().length > 0}">
+        <p class="px-2 py-1.5 text-xs font-medium text-muted-foreground" role="presentation">Tasks</p>
+        @for (task of tasks(); track task.id) {
+        <button
+          (click)="selectTask(task)"
+          class="flex w-full items-center gap-2 rounded-sm px-2 py-2 text-sm hover:bg-accent transition-colors text-left"
+          role="option"
+          [attr.aria-label]="'Navigate to task: ' + task.title"
+          type="button"
+        >
+          <lucide-icon name="file-text" [size]="16" class="text-muted-foreground flex-shrink-0"></lucide-icon>
+          <div class="flex-1 min-w-0">
+            <p class="truncate font-medium">{{ task.title }}</p>
+            @if (task.description) {
+            <p class="text-xs text-muted-foreground truncate">{{ task.description }}</p>
+            }
+            <div class="flex items-center gap-2 mt-1">
+              @if (task.status) {
+              <span class="text-xs px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground">
+                {{ task.status }}
+              </span>
+              }
+              @if (task.priority) {
+              <span class="text-xs px-1.5 py-0.5 rounded" 
+                [ngClass]="{
+                  'bg-destructive/10 text-destructive': task.priority === 'HIGH',
+                  'bg-yellow-500/10 text-yellow-600': task.priority === 'MEDIUM',
+                  'bg-blue-500/10 text-blue-600': task.priority === 'LOW'
+                }">
+                {{ task.priority }}
+              </span>
+              }
+            </div>
+          </div>
+        </button>
+        }
+      </div>
+      }
+
+      <!-- Comments Results -->
+      @if (comments().length > 0) {
+      <div class="p-2" [ngClass]="{'border-t border-border': projects().length > 0 || tasks().length > 0}">
+        <p class="px-2 py-1.5 text-xs font-medium text-muted-foreground" role="presentation">Comments</p>
+        @for (comment of comments(); track comment.id) {
+        <button
+          (click)="selectComment(comment)"
+          class="flex w-full items-center gap-2 rounded-sm px-2 py-2 text-sm hover:bg-accent transition-colors text-left"
+          role="option"
+          [attr.aria-label]="'Navigate to comment by ' + (comment.user?.firstName || comment.userName || 'Unknown')"
+          type="button"
+        >
+          <lucide-icon name="message-square" [size]="16" class="text-muted-foreground flex-shrink-0"></lucide-icon>
+          <div class="flex-1 min-w-0">
+            <p class="text-xs text-muted-foreground mb-1">
+              @if (comment.user) {
+              <span class="font-medium">{{ comment.user.firstName }} {{ comment.user.lastName }}</span>
+              } @else if (comment.userName) {
+              <span class="font-medium">{{ comment.userName }}</span>
+              } @else {
+              <span>Unknown user</span>
+              }
+            </p>
+            <p class="text-xs truncate">{{ comment.content }}</p>
+          </div>
+        </button>
+        }
+      </div>
+      }
+    }
+
+    <!-- No Results -->
+    @else if (showNoResults) {
+    <div class="p-8 text-center" role="status" aria-live="polite">
       <lucide-icon name="Search" [size]="32" class="mx-auto text-muted-foreground/50"></lucide-icon>
       <p class="mt-2 text-sm text-muted-foreground">No results found</p>
       <p class="text-xs text-muted-foreground">Try searching for something else</p>

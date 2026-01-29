@@ -1,1 +1,72 @@
 /* Global search styles */
+
+/* Smooth transitions for dropdown */
+#search-results {
+  animation: slideDown 0.15s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Custom scrollbar for results */
+#search-results::-webkit-scrollbar {
+  width: 6px;
+}
+
+#search-results::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#search-results::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.2);
+  border-radius: 3px;
+}
+
+#search-results::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.3);
+}
+
+/* Loading spinner animation */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Focus styles for accessibility */
+button:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+input:focus-visible {
+  outline: none;
+}
+
+/* Ensure proper text truncation */
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  #search-results {
+    width: calc(100vw - 2rem);
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}

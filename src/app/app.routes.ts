@@ -107,6 +107,16 @@ export const routes: Routes = [
       },
 
       // ============================================
+      // SEARCH
+      // ============================================
+      {
+        path: 'search',
+        loadComponent: () =>
+          import('./features/search/search.component').then((m) => m.SearchComponent),
+        data: { title: 'Search' },
+      },
+
+      // ============================================
       // NOTIFICATIONS
       // ============================================
       {

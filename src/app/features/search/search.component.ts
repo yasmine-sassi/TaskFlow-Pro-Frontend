@@ -1,12 +1,10 @@
 import { 
   Component, 
-  signal, 
-  HostListener, 
-  ElementRef, 
   OnInit, 
   OnDestroy,
-  ChangeDetectionStrategy,
-  inject
+  signal,
+  inject,
+  ChangeDetectionStrategy 
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
@@ -30,27 +28,25 @@ import { Project } from '../../core/models/project.model';
 import { Comment } from '../../core/models/task.model';
 
 @Component({
-  selector: 'app-global-search',
+  selector: 'app-search',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, LucideIconComponent],
-  templateUrl: './global-search.component.html',
-  styleUrls: ['./global-search.component.css'],
+  templateUrl: './search.component.html',
+  styleUrls: ['./search.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class GlobalSearchComponent implements OnInit, OnDestroy {
-  // Inject services
+export class SearchComponent implements OnInit, OnDestroy {
   private searchService = inject(SearchService);
   private router = inject(Router);
-  private elementRef = inject(ElementRef);
   private logger = inject(LoggerService);
 
   // Reactive Form Control for search input
   searchControl = new FormControl('');
 
   // Signals for state management
-  isOpen = signal(false);
   isLoading = signal(false);
   error = signal<string | null>(null);
+  hasSearched = signal(false);
   
   // Results signals
   tasks = signal<Task[]>([]);
@@ -62,6 +58,7 @@ export class GlobalSearchComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.setupSearchSubscription();
+    this.logger.info('Search page initialized');
   }
 
   ngOnDestroy() {
@@ -69,9 +66,6 @@ export class GlobalSearchComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  /**
-   * Setup reactive search with RxJS operators
-   */
   private setupSearchSubscription(): void {
     this.searchControl.valueChanges
       .pipe(
@@ -79,12 +73,12 @@ export class GlobalSearchComponent implements OnInit, OnDestroy {
           this.isLoading.set(true);
           this.error.set(null);
         }),
-        debounceTime(300), // Wait 300ms after user stops typing
-        distinctUntilChanged(), // Only emit when value actually changes
+        debounceTime(400),
+        distinctUntilChanged(),
         switchMap((query) => {
-          // Cancel previous requests and only process latest
           if (!query || query.trim().length < 2) {
             this.clearResults();
+            this.hasSearched.set(false);
             return of({
               tasks: [],
               projects: [],
@@ -94,8 +88,10 @@ export class GlobalSearchComponent implements OnInit, OnDestroy {
             } as GlobalSearchResults);
           }
 
+          this.hasSearched.set(true);
           this.logger.info('Performing search for: ' + query);
-          return this.searchService.globalSearch(query).pipe(
+          
+          return this.searchService.globalSearch(query, 20).pipe(
             catchError((error) => {
               this.logger.error('Search error: ' + error.message);
               this.error.set('Failed to search. Please try again.');
@@ -121,83 +117,43 @@ export class GlobalSearchComponent implements OnInit, OnDestroy {
       });
   }
 
-  @HostListener('document:keydown', ['$event'])
-  handleKeyboardEvent(event: KeyboardEvent) {
-    // Cmd/Ctrl + K to open search
-    if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
-      event.preventDefault();
-      this.openSearch();
-    }
-    // Escape to close
-    if (event.key === 'Escape' && this.isOpen()) {
-      this.closeSearch();
-    }
-  }
-
-  @HostListener('document:mousedown', ['$event'])
-  handleClickOutside(event: MouseEvent) {
-    if (this.isOpen() && !this.elementRef.nativeElement.contains(event.target)) {
-      this.closeSearch();
-    }
-  }
-
-  openSearch() {
-    this.isOpen.set(true);
-    this.logger.info('Global search opened');
-    
-    // Focus input after a brief delay to ensure DOM is ready
-    setTimeout(() => {
-      const input = this.elementRef.nativeElement.querySelector('input');
-      if (input) {
-        input.focus();
-      }
-    }, 100);
-  }
-
-  closeSearch() {
-    this.isOpen.set(false);
-    this.searchControl.setValue('', { emitEvent: false });
-    this.clearResults();
-    this.error.set(null);
-    this.logger.info('Global search closed');
-  }
-
   private clearResults() {
     this.tasks.set([]);
     this.projects.set([]);
     this.comments.set([]);
   }
 
-  selectTask(task: Task) {
-    this.logger.info('Task selected: ' + task.id);
+  navigateToTask(task: Task) {
+    this.logger.info('Navigating to task: ' + task.id);
     this.router.navigate(['/tasks', task.id]);
-    this.closeSearch();
   }
 
-  selectProject(project: Project) {
-    this.logger.info('Project selected: ' + project.id);
+  navigateToProject(project: Project) {
+    this.logger.info('Navigating to project: ' + project.id);
     this.router.navigate(['/projects', project.id]);
-    this.closeSearch();
   }
 
-  selectComment(comment: Comment) {
-    this.logger.info('Comment selected: ' + comment.id);
-    // Navigate to the task containing the comment
+  navigateToComment(comment: Comment) {
+    this.logger.info('Navigating to comment: ' + comment.id);
     this.router.navigate(['/tasks', comment.taskId]);
-    this.closeSearch();
   }
 
   get hasResults(): boolean {
     return this.tasks().length > 0 || this.projects().length > 0 || this.comments().length > 0;
   }
 
-  get showDropdown(): boolean {
-    return this.isOpen() && (this.searchControl.value?.length ?? 0) > 1;
+  get showEmptyState(): boolean {
+    return !this.hasSearched() && !this.searchControl.value;
   }
 
   get showNoResults(): boolean {
-    return !this.isLoading() && 
+    return this.hasSearched() && 
+           !this.isLoading() && 
            !this.hasResults && 
            (this.searchControl.value?.length ?? 0) >= 2;
+  }
+
+  get totalResults(): number {
+    return this.tasks().length + this.projects().length + this.comments().length;
   }
 }
