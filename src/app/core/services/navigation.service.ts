@@ -1,4 +1,4 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
 import { Router, NavigationEnd, ActivatedRoute } from '@angular/router';
 import { filter } from 'rxjs/operators';
 
@@ -24,6 +24,9 @@ export interface Breadcrumb {
   providedIn: 'root',
 })
 export class NavigationService {
+  private router = inject(Router);
+  private activatedRoute = inject(ActivatedRoute);
+
   // Signals for state management
   private breadcrumbsSignal = signal<Breadcrumb[]>([]);
   private navigationHistorySignal = signal<string[]>([]);
@@ -35,7 +38,7 @@ export class NavigationService {
   currentRoute = this.currentRouteSignal.asReadonly();
   canGoBack = computed(() => this.navigationHistorySignal().length > 1);
 
-  constructor(private router: Router, private activatedRoute: ActivatedRoute) {
+  constructor() {
     this.initializeNavigation();
   }
 

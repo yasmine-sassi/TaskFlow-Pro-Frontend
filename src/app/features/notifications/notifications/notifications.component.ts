@@ -17,6 +17,7 @@ type ReadFilter = 'all' | 'read' | 'unread';
 })
 export class NotificationsComponent implements OnInit {
   public notificationsService = inject(NotificationsService);
+  private cdr = inject(ChangeDetectorRef);
 
   // UI state
   showFilters = signal(false);
@@ -38,7 +39,7 @@ export class NotificationsComponent implements OnInit {
     const readFilter = this.readFilter();
     const typeFilter = this.notificationsService.typeFilterSignal();
 
-    return notifications.filter(notification => {
+    return notifications.filter((notification) => {
       // Type filter
       if (typeFilter && notification.type !== typeFilter) {
         return false;
@@ -84,8 +85,6 @@ export class NotificationsComponent implements OnInit {
   totalCount = computed(() => this.notifications().length);
   filteredCount = computed(() => this.filteredNotifications().length);
 
-  constructor(private cdr: ChangeDetectorRef) {}
-
   ngOnInit() {
     // Load latest notifications when the page is opened
     this.notificationsService.loadNotifications().subscribe({
@@ -94,12 +93,12 @@ export class NotificationsComponent implements OnInit {
       },
       error: (error) => {
         console.error('Failed to load notifications on page open:', error);
-      }
+      },
     });
   }
 
   toggleFilters() {
-    this.showFilters.update(v => !v);
+    this.showFilters.update((v) => !v);
   }
 
   setDateFilter(filter: DateFilter) {
@@ -129,7 +128,7 @@ export class NotificationsComponent implements OnInit {
       },
       error: (error) => {
         console.error('Failed to mark notification as read:', error);
-      }
+      },
     });
   }
 
@@ -141,7 +140,7 @@ export class NotificationsComponent implements OnInit {
       },
       error: (error) => {
         console.error('Failed to mark all notifications as read:', error);
-      }
+      },
     });
   }
 
@@ -153,7 +152,7 @@ export class NotificationsComponent implements OnInit {
       },
       error: (error) => {
         console.error('Failed to delete notification:', error);
-      }
+      },
     });
   }
 
