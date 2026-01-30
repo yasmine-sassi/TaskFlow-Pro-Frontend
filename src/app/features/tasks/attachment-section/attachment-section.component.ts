@@ -11,8 +11,13 @@ import { Attachment } from '../../../core/models/task.model';
 })
 export class AttachmentSectionComponent {
   attachments = input.required<Attachment[]>();
-  
-  addAttachment = output<{ fileName: string; fileUrl: string; mimeType: string; fileSize: number }>();
+
+  addAttachment = output<{
+    fileName: string;
+    fileUrl: string;
+    mimeType: string;
+    fileSize: number;
+  }>();
   removeAttachment = output<string>();
 
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
@@ -21,16 +26,17 @@ export class AttachmentSectionComponent {
     const input = event.target as HTMLInputElement;
     if (!input.files) return;
 
-    Array.from(input.files).forEach(file => {
+    // Use for...of for clearer side-effect intent
+    for (const file of Array.from(input.files)) {
       // In production, upload to server/S3 and get URL
       const url = URL.createObjectURL(file);
       this.addAttachment.emit({
         fileName: file.name,
         fileUrl: url,
         mimeType: file.type,
-        fileSize: file.size
+        fileSize: file.size,
       });
-    });
+    }
 
     // Reset input
     input.value = '';

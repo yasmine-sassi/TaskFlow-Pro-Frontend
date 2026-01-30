@@ -55,17 +55,19 @@ export class BoardComponent implements OnInit {
   // Get unique projects from tasks
   userProjects = computed<{ id: string; name: string }[]>(() => {
     const tasks = this.myTasks();
-    const projectMap = new Map<string, { id: string; name: string }>();
 
-    tasks.forEach((task) => {
-      if (task.projectId && !projectMap.has(task.projectId)) {
-        // Use project info from task if available
-        projectMap.set(task.projectId, {
-          id: task.projectId,
-          name: (task as any).project?.name || `Project ${task.projectId.substring(0, 8)}`,
-        });
-      }
-    });
+    // Declarative approach: filter tasks with projectId, then create Map for uniqueness
+    const projectMap = new Map(
+      tasks
+        .filter((task) => task.projectId)
+        .map((task) => [
+          task.projectId,
+          {
+            id: task.projectId,
+            name: (task as any).project?.name || `Project ${task.projectId.substring(0, 8)}`,
+          },
+        ]),
+    );
 
     return Array.from(projectMap.values());
   });

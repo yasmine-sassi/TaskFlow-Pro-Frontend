@@ -185,13 +185,8 @@ export class DashboardComponent implements OnInit {
     // Count tasks from recent and high priority lists
     const allTasks = [...this.recentTasks(), ...this.highPriorityTasks()];
 
-    // Use a Set to avoid counting duplicates
-    const uniqueTasks = new Map();
-    allTasks.forEach((task) => {
-      if (!uniqueTasks.has(task.id)) {
-        uniqueTasks.set(task.id, task);
-      }
-    });
+    // Declarative deduplication using Map constructor
+    const uniqueTasks = new Map(allTasks.map((task) => [task.id, task]));
 
     return Array.from(uniqueTasks.values()).filter((task) => task.projectId === projectId).length;
   }

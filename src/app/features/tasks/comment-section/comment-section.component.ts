@@ -110,20 +110,18 @@ export class CommentSectionComponent {
 
   extractMentions(text: string): string[] {
     const mentionRegex = /@([A-Za-z]+\s[A-Za-z]+)/g;
-    const mentions: string[] = [];
-    let match;
 
-    while ((match = mentionRegex.exec(text)) !== null) {
-      const [fullName, userName] = match;
-      const [firstName, lastName] = userName.split(' ');
-      const user = this.availableUsers().find(
-        (u) => u.firstName === firstName && u.lastName === lastName,
-      );
-      if (user) {
-        mentions.push(user.id);
-      }
-    }
-    return mentions;
+    // Declarative approach using matchAll and flatMap
+    return Array.from(text.matchAll(mentionRegex))
+      .map((match) => {
+        const userName = match[1];
+        const [firstName, lastName] = userName.split(' ');
+        const user = this.availableUsers().find(
+          (u) => u.firstName === firstName && u.lastName === lastName,
+        );
+        return user?.id;
+      })
+      .filter((id): id is string => id !== undefined);
   }
 
   renderComment(text: string): string {

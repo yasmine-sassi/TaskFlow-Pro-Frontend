@@ -260,33 +260,34 @@ export class ProjectModalComponent implements OnChanges {
   }
 
   private buildDesiredRoles(ownerId: string, editors: string[], viewers: string[]) {
-    const desired = new Map<string, ProjectMemberRole>();
-    viewers.forEach((id) => desired.set(id, ProjectMemberRole.VIEWER));
-    editors.forEach((id) => desired.set(id, ProjectMemberRole.EDITOR));
-    desired.set(ownerId, ProjectMemberRole.OWNER);
-    return desired;
+    // Declarative Map construction from array of entries
+    return new Map<string, ProjectMemberRole>([
+      ...viewers.map((id) => [id, ProjectMemberRole.VIEWER] as const),
+      ...editors.map((id) => [id, ProjectMemberRole.EDITOR] as const),
+      [ownerId, ProjectMemberRole.OWNER],
+    ]);
   }
 
   private buildMemberOperations(projectId: string, desiredRoles: Map<string, ProjectMemberRole>) {
-    const operations: Array<any> = [];
     const existingMembers = this.projectToEdit?.members ?? [];
     const existingMap = new Map(existingMembers.map((m) => [m.userId, m]));
 
-    desiredRoles.forEach((role, userId) => {
+    // Declarative operations construction using flatMap
+    const addOrUpdateOps = Array.from(desiredRoles.entries()).flatMap(([userId, role]) => {
       const existing = existingMap.get(userId);
       if (!existing) {
-        operations.push(this.projectsService.addMember(projectId, { userId, role }));
+        return [this.projectsService.addMember(projectId, { userId, role })];
       } else if (existing.role !== role) {
-        operations.push(this.projectsService.updateMemberRole(projectId, existing.id, { role }));
+        return [this.projectsService.updateMemberRole(projectId, existing.id, { role })];
       }
-      existingMap.delete(userId);
+      return [];
     });
 
-    existingMap.forEach((member) => {
-      operations.push(this.projectsService.removeMember(projectId, member.id));
-    });
+    const removeOps = Array.from(existingMap.values())
+      .filter((member) => !desiredRoles.has(member.userId))
+      .map((member) => this.projectsService.removeMember(projectId, member.id));
 
-    return operations;
+    return [...addOrUpdateOps, ...removeOps];
   }
 
   getUserName(userId: string): string {
