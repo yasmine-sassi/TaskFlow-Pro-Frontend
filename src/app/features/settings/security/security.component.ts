@@ -6,6 +6,7 @@ import { passwordStrengthValidator } from '../../../shared/validators/password-s
 import { FormStateService } from '../../../core/services/form-state.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../../core/services/auth.service';
+import { CurrentPasswordValidator } from '../../../shared/validators/current-password.validator';
 
 @Component({
   selector: 'app-security',
@@ -20,6 +21,7 @@ export class SecurityComponent {
   private formState = inject(FormStateService);
   private destroyRef = inject(DestroyRef);
   private authService = inject(AuthService);
+  private currentPasswordValidator = inject(CurrentPasswordValidator);
 
   private draftKey = '';
 
@@ -30,7 +32,10 @@ export class SecurityComponent {
 
   constructor() {
     this.passwordForm = this.fb.group({
-      currentPassword: ['', [Validators.required]],
+      currentPassword: ['', 
+        [Validators.required],
+        [this.currentPasswordValidator.validate()]
+      ],
       newPassword: ['', [Validators.required, passwordStrengthValidator()]],
       confirmPassword: ['', [Validators.required]],
     }, { validators: this.passwordMatchValidator });

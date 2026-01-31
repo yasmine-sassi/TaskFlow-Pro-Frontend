@@ -1,7 +1,6 @@
-// auth.service.ts - FIXED version with proper public refreshCurrentUser method
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { BehaviorSubject, Observable, tap } from 'rxjs';
+import { BehaviorSubject, Observable, tap, map, catchError, of } from 'rxjs';
 import { User, UserRole, AuthResponse, LoginDto, RegisterDto } from '../models/user.model';
 import { BaseService } from './base.service';
 import { WebSocketService } from './websocket.service';
@@ -92,6 +91,30 @@ export class AuthService extends BaseService {
         this.updateCurrentUser(response.user);
       })
     );
+  }
+
+  /**
+   * Verify current password
+   * Used by password change form validation
+   */
+  verifyCurrentPassword(password: string): Observable<boolean> {
+    return this.http
+      .post<any>(this.buildUrl('/auth/verify-password'), { password }, { withCredentials: true })
+      .pipe(
+        tap((response) => {
+          console.log('Password verification response:', response);
+        }),
+        map((response) => {
+          // Handle both response structures: { isValid: boolean } and { data: { isValid: boolean } }
+          const isValid = response.data?.isValid ?? response.isValid;
+          console.log('Parsed isValid:', isValid);
+          return isValid;
+        }),
+        catchError((error) => {
+          console.error('Password verification error:', error);
+          return of(false);
+        })
+      );
   }
 
   /**

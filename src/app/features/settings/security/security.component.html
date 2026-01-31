@@ -54,6 +54,14 @@
             @if (passwordForm.get('currentPassword')?.errors?.['required']) {
               <span>Current password is required</span>
             }
+            @if (passwordForm.get('currentPassword')?.errors?.['incorrectPassword']) {
+              <span>Current password is incorrect</span>
+            }
+          </p>
+        }
+        @if (passwordForm.get('currentPassword')?.pending) {
+          <p class="text-xs text-muted-foreground">
+            <span>Verifying password...</span>
           </p>
         }
       </div>
