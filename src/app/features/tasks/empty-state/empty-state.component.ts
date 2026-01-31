@@ -1,15 +1,15 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Inbox, Plus } from 'lucide-angular';
 import { LucideIconComponent } from '../../../shared/components/lucide-icon/lucide-icon.component';
-
 
 @Component({
   selector: 'app-empty-state',
   standalone: true,
   imports: [CommonModule, LucideIconComponent],
   templateUrl: './empty-state.component.html',
-  styleUrls: ['./empty-state.component.css']
+  styleUrls: ['./empty-state.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EmptyStateComponent {
   @Input() title = 'No tasks yet';
