@@ -57,6 +57,10 @@ export class WorkspaceComponent implements OnInit {
   // Data signals
   projectsWithTasks = signal<ProjectWithTasks[]>([]);
 
+  // Modal state
+  selectedTask = signal<Task | null>(null);
+  isTaskModalOpen = signal(false);
+
   // Computed signals
   totalProjects = computed(() => this.projectsWithTasks().length);
   totalTasks = computed(() =>
@@ -271,6 +275,31 @@ export class WorkspaceComponent implements OnInit {
     );
     return projectData?.paginationState.isLoadingMore ?? false;
   };
+
+  /**
+   * Open task details modal
+   */
+  openTaskModal(task: Task) {
+    this.selectedTask.set(task);
+    this.isTaskModalOpen.set(true);
+  }
+
+  /**
+   * Close task details modal
+   */
+  closeTaskModal() {
+    this.isTaskModalOpen.set(false);
+    this.selectedTask.set(null);
+  }
+
+  /**
+   * Close modal on backdrop click
+   */
+  onModalBackdropClick(event: MouseEvent) {
+    if ((event.target as HTMLElement)?.id === 'task-modal-backdrop') {
+      this.closeTaskModal();
+    }
+  }
 
   /**
    * Navigate to tasks page
