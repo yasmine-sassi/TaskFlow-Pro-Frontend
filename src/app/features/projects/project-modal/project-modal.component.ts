@@ -89,7 +89,10 @@ export class ProjectModalComponent implements OnChanges {
     });
 
     this.form.valueChanges
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        debounceTime(500),
+        takeUntilDestroyed(this.destroyRef)
+      )
       .subscribe(() => this.saveDraft());
   }
 

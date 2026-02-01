@@ -323,13 +323,10 @@ export class NotificationsService extends BaseService {
    * Mark notification as read and update signals
    */
   markAsReadWithSignal(notificationId: string): Observable<Notification> {
-    console.log('Service: Marking notification as read:', notificationId);
     this.loadingSignal.set(true);
     this.errorSignal.set(null);
     return this.markAsRead(notificationId).pipe(
       tap((updatedNotification) => {
-        console.log('Service: API call successful, updating signals');
-        console.log('Service: Updated notification:', updatedNotification);
         const parsedNotification: Notification = {
           ...updatedNotification,
           type: updatedNotification.type as NotificationType,
@@ -342,12 +339,10 @@ export class NotificationsService extends BaseService {
         // Update unread count
         const currentCount = this.unreadCountSignal();
         const newCount = Math.max(0, currentCount - 1);
-        console.log('Service: Unread count', currentCount, '->', newCount);
         this.unreadCountSignal.set(newCount);
         this.loadingSignal.set(false);
       }),
       catchError((error) => {
-        console.error('Service: Failed to mark notification as read:', error);
         this.errorSignal.set(error.message || 'Failed to mark notification as read');
         this.loadingSignal.set(false);
         return throwError(() => error);

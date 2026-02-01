@@ -24,9 +24,7 @@ export class AuthService extends BaseService {
   isAdmin = computed(() => this.currentUserSignal()?.role === UserRole.ADMIN);
 
   isAuthenticated(): boolean {
-    const isAuth = this.currentUserSignal() !== null;
-    console.log('isAuthenticated check:', { isAuth, user: this.currentUserSignal() });
-    return isAuth;
+    return this.currentUserSignal() !== null;
   }
 
   constructor() {
@@ -36,22 +34,16 @@ export class AuthService extends BaseService {
 
   private loadUserFromStorage(): void {
     const userJson = localStorage.getItem('currentUser');
-    console.log('Loading user from storage:', { userJson: !!userJson });
     if (userJson) {
       try {
         const user = JSON.parse(userJson);
-        console.log('Setting current user from storage:', user);
         this.updateCurrentUser(user);
         // Reconnect WebSocket if user is loaded from storage
         this.webSocketService.reconnect();
       } catch (error) {
-        console.error('Error parsing user data from localStorage:', error);
         // Clear corrupted data
         localStorage.removeItem('currentUser');
-        console.log('Cleared corrupted user data from localStorage');
       }
-    } else {
-      console.log('No user data in storage');
     }
   }
 
@@ -101,19 +93,11 @@ export class AuthService extends BaseService {
     return this.http
       .post<any>(this.buildUrl('/auth/verify-password'), { password }, { withCredentials: true })
       .pipe(
-        tap((response) => {
-          console.log('Password verification response:', response);
-        }),
         map((response) => {
           // Handle both response structures: { isValid: boolean } and { data: { isValid: boolean } }
-          const isValid = response.data?.isValid ?? response.isValid;
-          console.log('Parsed isValid:', isValid);
-          return isValid;
+          return response.data?.isValid ?? response.isValid;
         }),
-        catchError((error) => {
-          console.error('Password verification error:', error);
-          return of(false);
-        })
+        catchError(() => of(false))
       );
   }
 
@@ -162,11 +146,9 @@ export class AuthService extends BaseService {
    * Update current user in state and storage (internal use)
    */
   private updateCurrentUser(user: User): void {
-    console.log('Updating current user:', user);
     localStorage.setItem('currentUser', JSON.stringify(user));
     this.currentUserSubject.next(user);
     this.currentUserSignal.set(user);
-    console.log('Current user signal set to:', this.currentUserSignal());
   }
 
   /**
@@ -174,7 +156,6 @@ export class AuthService extends BaseService {
    * This is the public method that components should call
    */
   refreshCurrentUser(user: User): void {
-    console.log('Refreshing current user:', user);
     this.updateCurrentUser(user);
   }
 

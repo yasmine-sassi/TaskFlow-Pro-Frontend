@@ -66,9 +66,7 @@ export class UsersService extends BaseService {
    * Get users assignable to a specific project (admin or project owner)
    */
   getAssignableUsers(projectId: string): Observable<User[]> {
-    console.log('🔍 getAssignableUsers called with projectId:', projectId);
     if (!projectId || projectId.trim() === '') {
-      console.warn('⚠️ getAssignableUsers called with empty projectId, falling back to getAllUsers');
       return this.getAllUsers();
     }
     if (!this.assignableUsersCache.has(projectId)) {
@@ -76,7 +74,6 @@ export class UsersService extends BaseService {
         .get<any>(this.buildUrl(`/projects/${projectId}/assignable-users`))
         .pipe(
           switchMap((res) => {
-            console.log('🔍 getAssignableUsers raw response:', res);
             const list = Array.isArray(res?.data)
               ? res.data
               : Array.isArray(res)
@@ -96,7 +93,6 @@ export class UsersService extends BaseService {
             }
 
             if (normalized.length === 0) {
-              console.warn('⚠️ assignable users payload is empty, returning []');
               return of([] as User[]);
             }
 
@@ -109,7 +105,6 @@ export class UsersService extends BaseService {
           map(users => this.dedupeById(users)),
           shareReplay(1),
           catchError((err) => {
-            console.error('❌ getAssignableUsers error:', err);
             // Invalidate cache entry on error
             this.assignableUsersCache.delete(projectId);
             return throwError(() => err);

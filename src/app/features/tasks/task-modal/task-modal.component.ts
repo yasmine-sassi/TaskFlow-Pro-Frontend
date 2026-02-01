@@ -129,14 +129,11 @@ export class TaskModalComponent implements OnInit, OnDestroy {
   ngOnChanges(changes: SimpleChanges) {
     if (changes['open']?.currentValue && !changes['open'].previousValue) {
       this.draftKey = this.buildDraftKey();
-      console.log('🔑 Task modal draft key:', this.draftKey, 'isEditing:', this.isEditing);
       this.loadData();
       // Only use draft for CREATE mode, not EDIT mode
       if (!this.isEditing && this.hasDraft()) {
-        console.log('🔄 Restoring draft for CREATE mode');
         this.restoreDraft();
       } else {
-        console.log('🗑 Resetting form - editing:', this.isEditing, 'hasDraft:', this.hasDraft());
         this.resetForm();
       }
     }
@@ -165,9 +162,14 @@ export class TaskModalComponent implements OnInit, OnDestroy {
         this.saveDraft();
       });
 
-    this.taskForm.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
-      this.saveDraft();
-    });
+    this.taskForm.valueChanges
+      .pipe(
+        debounceTime(500),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(() => {
+        this.saveDraft();
+      });
   }
 
   ngOnDestroy() {
@@ -571,7 +573,7 @@ export class TaskModalComponent implements OnInit, OnDestroy {
           this.labelsControl.setValue([...this.labelsControl.value, label]);
           this.saveDraft();
         },
-        error: (err) => console.error('Failed to create label:', err),
+        error: () => {},
       });
   }
 

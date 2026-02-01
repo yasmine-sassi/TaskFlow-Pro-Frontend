@@ -63,8 +63,8 @@ export class NotificationsDropdownComponent implements OnInit {
         next: () => {
           // Unread count updated
         },
-        error: (error) => {
-          console.error('Failed to poll unread count:', error);
+        error: () => {
+          // Silently fail polling
         },
       });
   }
@@ -160,7 +160,6 @@ export class NotificationsDropdownComponent implements OnInit {
       }
       return formatDistanceToNow(dateObj, { addSuffix: true });
     } catch (error) {
-      console.error('Error parsing date:', date, error);
       return 'Invalid date';
     }
   }

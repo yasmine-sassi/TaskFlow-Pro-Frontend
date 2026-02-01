@@ -142,11 +142,9 @@ export class BoardComponent implements OnInit {
             tasks[index] = { ...tasks[index], status: newStatus };
             this.myTasks.set([...tasks]);
           }
-          console.log(`Task "${task.title}" moved to ${this.getColumnTitle(newStatus)}`);
           // Optionally show a toast notification
         },
-        error: (error) => {
-          console.error('Failed to update task status:', error);
+        error: () => {
           // Optionally show error notification
         },
       });
@@ -199,12 +197,8 @@ export class BoardComponent implements OnInit {
       next: (tasks) => {
         this.myTasks.set(tasks);
         this.isLoading.set(false);
-        const taskCount = tasks.length;
-        const taskType = isAdminUser ? 'all' : 'assigned';
-        console.log(`Loaded ${taskCount} ${taskType} tasks`);
       },
-      error: (error) => {
-        console.error('Failed to load tasks:', error);
+      error: () => {
         this.isLoading.set(false);
         // Optionally show error notification
       },

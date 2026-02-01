@@ -112,14 +112,12 @@ export class ProjectsComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (projects) => {
-          console.log('📦 Loaded projects with members and tasks:', projects.length);
           // Backend now returns projects with members and tasks included
           // No need for additional API calls - N+1 problem solved!
           this.projects.set(this.filterVisibleProjects(projects));
           this.isLoading.set(false);
         },
-        error: (err: any) => {
-          console.error('Failed to load projects:', err);
+        error: () => {
           this.isLoading.set(false);
         },
       });
@@ -158,7 +156,7 @@ export class ProjectsComponent {
         next: () => {
           this.projects.update((current) => current.filter((p) => p.id !== projectId));
         },
-        error: (err) => console.error('Failed to delete project:', err),
+        error: () => {},
       });
   }
 
@@ -167,7 +165,6 @@ export class ProjectsComponent {
     if (!user) return;
     const canEdit = this.canEditProject(project);
     if (!canEdit) {
-      console.warn('Edit not allowed: only ADMIN or owner can edit');
       return;
     }
     this.selectedProject.set(project);
@@ -211,7 +208,7 @@ export class ProjectsComponent {
             ),
           );
         },
-        error: (err) => console.error('Failed to archive project:', err),
+        error: () => {},
       });
   }
 
@@ -227,7 +224,7 @@ export class ProjectsComponent {
             current.map((p) => (p.id === project.id ? { ...p, isArchived: false } : p)),
           );
         },
-        error: (err) => console.error('Failed to unarchive project:', err),
+        error: () => {},
       });
   }
 }
