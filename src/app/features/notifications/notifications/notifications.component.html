@@ -121,94 +121,94 @@
 
   <!-- Notifications List -->
   @else {
-  @if (filteredNotifications().length > 0) {
-  <div class="space-y-4">
-    @for (notification of filteredNotifications(); track notification.id) {
-    <div class="group relative rounded-lg border border-border transition-colors cursor-pointer" [ngClass]="!notification.isRead ? 'bg-accent/50 hover:bg-accent' : 'hover:bg-accent/50'" (click)="notification.isRead || markAsRead(notification.id)">
-      <div class="flex gap-4 p-4">
-        <!-- Icon -->
-        <div
-          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
-          [ngClass]="getNotificationColor(notification.type)"
-        >
-          <lucide-icon [name]="getNotificationIcon(notification.type)" [size]="20"></lucide-icon>
-        </div>
-
-        <!-- Content -->
-        <div class="flex-1 space-y-2 min-w-0">
-          <div class="flex items-start justify-between gap-4">
-            <div class="flex-1">
-              <h3 class="font-semibold text-foreground leading-tight">
-                {{ notification.title }}
-              </h3>
-              <p class="text-sm text-muted-foreground mt-1 leading-relaxed">
-                {{ notification.message }}
-              </p>
-            </div>
-
-            <!-- Actions -->
-            <div class="flex items-center gap-2 shrink-0">
-              @if (!notification.isRead) {
-              <div class="h-2 w-2 rounded-full bg-primary"></div>
-              }
-              <button
-                (click)="$event.stopPropagation(); deleteNotification(notification.id)"
-                class="opacity-0 group-hover:opacity-100 p-1 rounded-md hover:bg-destructive hover:text-destructive-foreground transition-all"
-                title="Delete notification"
-              >
-                <lucide-icon name="X" [size]="16"></lucide-icon>
-              </button>
-            </div>
+    @if (filteredNotifications().length > 0) {
+    <div class="space-y-4">
+      @for (notification of filteredNotifications(); track notification.id) {
+      <div class="group relative rounded-lg border border-border transition-colors cursor-pointer" [ngClass]="!notification.isRead ? 'bg-accent/50 hover:bg-accent' : 'hover:bg-accent/50'" (click)="notification.isRead || markAsRead(notification.id)">
+        <div class="flex gap-4 p-4">
+          <!-- Icon -->
+          <div
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+            [ngClass]="getNotificationColor(notification.type)"
+          >
+            <lucide-icon [name]="getNotificationIcon(notification.type)" [size]="20"></lucide-icon>
           </div>
 
-          <!-- Footer -->
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-4 text-xs text-muted-foreground">
-              <span>{{ getTimeAgo(notification.createdAt) }}</span>
-              <span>{{ getFormattedDate(notification.createdAt) }}</span>
+          <!-- Content -->
+          <div class="flex-1 space-y-2 min-w-0">
+            <div class="flex items-start justify-between gap-4">
+              <div class="flex-1">
+                <h3 class="font-semibold text-foreground leading-tight">
+                  {{ notification.title }}
+                </h3>
+                <p class="text-sm text-muted-foreground mt-1 leading-relaxed">
+                  {{ notification.message }}
+                </p>
+              </div>
+
+              <!-- Actions -->
+              <div class="flex items-center gap-2 shrink-0">
+                @if (!notification.isRead) {
+                <div class="h-2 w-2 rounded-full bg-primary"></div>
+                }
+                <button
+                  (click)="$event.stopPropagation(); deleteNotification(notification.id)"
+                  class="opacity-0 group-hover:opacity-100 p-1 rounded-md hover:bg-destructive hover:text-destructive-foreground transition-all"
+                  title="Delete notification"
+                >
+                  <lucide-icon name="X" [size]="16"></lucide-icon>
+                </button>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-4 text-xs text-muted-foreground">
+                <span>{{ getTimeAgo(notification.createdAt) }}</span>
+                <span>{{ getFormattedDate(notification.createdAt) }}</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-    }
-
-    <!-- Load More (if needed in future) -->
-    @if (filteredCount() < totalCount()) {
-    <div class="text-center py-4">
-      <p class="text-sm text-muted-foreground">
-        Showing {{ filteredCount() }} of {{ totalCount() }} notifications
-      </p>
-    </div>
-    }
-  </div>
-  }
-
-  <!-- Empty State -->
-  @else {
-  <div class="flex flex-col items-center justify-center py-16">
-    <lucide-icon
-      name="bell-off"
-      [size]="64"
-      class="text-muted-foreground/50 mb-4"
-    ></lucide-icon>
-    <h3 class="text-xl font-semibold text-foreground mb-2">No notifications found</h3>
-    <p class="text-muted-foreground text-center max-w-md">
-      @if (dateFilter() !== 'all' || readFilter() !== 'all' || notificationsService.typeFilterSignal()) {
-      Try adjusting your filters to see more notifications.
-      } @else {
-      You're all caught up! New notifications will appear here.
       }
-    </p>
-    @if (dateFilter() !== 'all' || readFilter() !== 'all' || notificationsService.typeFilterSignal()) {
-    <button
-      (click)="clearFilters()"
-      class="mt-4 px-4 py-2 text-primary hover:underline"
-    >
-      Clear filters
-    </button>
+
+      <!-- Load More (if needed in future) -->
+      @if (filteredCount() < totalCount()) {
+      <div class="text-center py-4">
+        <p class="text-sm text-muted-foreground">
+          Showing {{ filteredCount() }} of {{ totalCount() }} notifications
+        </p>
+      </div>
+      }
+    </div>
     }
-  </div>
-  }
+
+    <!-- Empty State -->
+    @else {
+    <div class="flex flex-col items-center justify-center py-16">
+      <lucide-icon
+        name="bell-off"
+        [size]="64"
+        class="text-muted-foreground/50 mb-4"
+      ></lucide-icon>
+      <h3 class="text-xl font-semibold text-foreground mb-2">No notifications found</h3>
+      <p class="text-muted-foreground text-center max-w-md">
+        @if (dateFilter() !== 'all' || readFilter() !== 'all' || notificationsService.typeFilterSignal()) {
+        Try adjusting your filters to see more notifications.
+        } @else {
+        You're all caught up! New notifications will appear here.
+        }
+      </p>
+      @if (dateFilter() !== 'all' || readFilter() !== 'all' || notificationsService.typeFilterSignal()) {
+      <button
+        (click)="clearFilters()"
+        class="mt-4 px-4 py-2 text-primary hover:underline"
+      >
+        Clear filters
+      </button>
+      }
+    </div>
+    }
   }
 </div>

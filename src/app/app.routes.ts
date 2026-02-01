@@ -1,8 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
-import { adminGuard } from './core/guards/admin.guard';
-import { projectMemberGuard } from './core/guards/project-member.guard';
-import { projectResolver, projectsResolver, tasksResolver, userResolver, notificationsResolver } from './core/resolvers';
+import { userResolver, notificationsResolver } from './core/resolvers';
 import { MainLayoutComponent } from './layout/main-layout/main-layout.component';
 
 export const routes: Routes = [
@@ -11,19 +9,7 @@ export const routes: Routes = [
   // ============================================
   {
     path: 'auth',
-    children: [
-      {
-        path: 'login',
-        loadComponent: () => import('./features/auth/login/login.component').then((m) => m.Login),
-        data: { title: 'Login' },
-      },
-      {
-        path: 'register',
-        loadComponent: () =>
-          import('./features/auth/register/register.component').then((m) => m.RegisterComponent),
-        data: { title: 'Register' },
-      },
-    ],
+    loadChildren: () => import('./features/auth/auth.routes').then((m) => m.authRoutes),
   },
 
   // ============================================
@@ -47,30 +33,7 @@ export const routes: Routes = [
       // ============================================
       {
         path: 'projects',
-        children: [
-          {
-            path: '',
-            loadComponent: () =>
-              import('./features/projects/projects/projects.component').then(
-                (m) => m.ProjectsComponent
-              ),
-            data: { title: 'Projects' },
-            resolve: { projects: projectsResolver },
-          },
-          {
-            path: ':projectId',
-            canActivate: [projectMemberGuard],
-            children: [
-              {
-                path: '',
-                loadComponent: () =>
-                  import('./features/board/board.component').then((m) => m.BoardComponent),
-                data: { title: 'Project Board' },
-                resolve: { project: projectResolver },
-              },
-            ],
-          },
-        ],
+        loadChildren: () => import('./features/projects/projects.routes').then((m) => m.projectsRoutes),
       },
 
       // ============================================
@@ -78,15 +41,7 @@ export const routes: Routes = [
       // ============================================
       {
         path: 'tasks',
-        children: [
-          {
-            path: '',
-            loadComponent: () =>
-              import('./features/tasks/tasks/tasks.component').then((m) => m.TasksComponent),
-            data: { title: 'My Tasks' },
-            resolve: { tasks: tasksResolver },
-          },
-        ],
+        loadChildren: () => import('./features/tasks/tasks.routes').then((m) => m.tasksRoutes),
       },
 
 
@@ -143,15 +98,7 @@ export const routes: Routes = [
       // ============================================
       {
         path: 'admin',
-        canActivate: [adminGuard],
-        children: [
-          {
-            path: '',
-            loadComponent: () =>
-              import('./features/admin/admin.component').then((m) => m.AdminComponent),
-            data: { title: 'Admin Dashboard' },
-          },
-        ],
+        loadChildren: () => import('./features/admin/admin.routes').then((m) => m.adminRoutes),
       },
     ],
   },

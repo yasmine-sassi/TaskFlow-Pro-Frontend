@@ -165,174 +165,176 @@
         (action)="hasFilters() ? clearFilters() : openTaskModal()"
       />
     } @else {
-      <!-- Grid View -->
-      @if (viewMode() === 'grid') {
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          @for (task of filteredAndSortedTasks(); track task.id) {
-            <app-task-card
-              [task]="task"
-              [showProject]="projectFilter() === 'all'"
-              [project]="getProjectById(task.projectId)"
-              (cardClick)="openTaskModal(task)"
-            />
-          }
-        </div>
-      }
+        <!-- Grid View -->
+        @if (viewMode() === 'grid') {
+          <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            @for (task of filteredAndSortedTasks(); track task.id) {
+              <app-task-card
+                [task]="task"
+                [showProject]="projectFilter() === 'all'"
+                [project]="getProjectById(task.projectId)"
+                (cardClick)="openTaskModal(task)"
+              />
+            }
+          </div>
+        }
 
-      <!-- Table View -->
-      @if (viewMode() === 'table') {
-        <div class="rounded-lg border border-border bg-card shadow-soft overflow-hidden">
-          <table class="w-full">
-            <thead class="border-b border-border bg-muted/50">
-              <tr>
-                <th
-                  (click)="toggleSort('title')"
-                  class="text-left px-4 py-3 text-sm font-medium cursor-pointer hover:bg-muted transition-colors"
-                >
-                  <div class="flex items-center gap-1">
-                    Title
-                    <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-                      />
-                    </svg>
-                  </div>
-                </th>
-                <th class="text-left px-4 py-3 text-sm font-medium">Project</th>
-                <th
-                  (click)="toggleSort('status')"
-                  class="text-left px-4 py-3 text-sm font-medium cursor-pointer hover:bg-muted transition-colors"
-                >
-                  <div class="flex items-center gap-1">
-                    Status
-                    <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-                      />
-                    </svg>
-                  </div>
-                </th>
-                <th
-                  (click)="toggleSort('priority')"
-                  class="text-left px-4 py-3 text-sm font-medium cursor-pointer hover:bg-muted transition-colors"
-                >
-                  <div class="flex items-center gap-1">
-                    Priority
-                    <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-                      />
-                    </svg>
-                  </div>
-                </th>
-                <th
-                  (click)="toggleSort('dueDate')"
-                  class="text-left px-4 py-3 text-sm font-medium cursor-pointer hover:bg-muted transition-colors"
-                >
-                  <div class="flex items-center gap-1">
-                    Due Date
-                    <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-                      />
-                    </svg>
-                  </div>
-                </th>
-                <th class="text-left px-4 py-3 text-sm font-medium">Assignee</th>
-              </tr>
-            </thead>
-          </table>
-          <cdk-virtual-scroll-viewport itemSize="56" class="block max-h-96">
+        <!-- Table View -->
+        @if (viewMode() === 'table') {
+          <div class="rounded-lg border border-border bg-card shadow-soft overflow-hidden">
             <table class="w-full">
-              <tbody>
-                <tr
-                  *cdkVirtualFor="let task of filteredAndSortedTasks(); trackBy: trackByTaskId"
-                  (click)="openTaskModal(task)"
-                  class="border-b border-border cursor-pointer hover:bg-muted/50 transition-colors"
-                >
-                  <td class="px-4 py-3">
-                    <div class="font-medium text-sm">{{ task.title }}</div>
-                    @if (task.labels && task.labels.length > 0) {
-                      <div class="flex gap-1 mt-1">
-                        @for (label of task.labels; track label.id) {
-                          <span
-                            [style.background-color]="label.color"
-                            class="inline-block rounded-full px-1.5 py-0 text-[10px] font-medium text-white"
-                          >
-                            {{ label.name }}
-                          </span>
-                        }
-                      </div>
-                    }
-                  </td>
-                  <td class="px-4 py-3">
-                    @if (getProjectById(task.projectId); as project) {
-                      <div class="flex items-center gap-2">
-                        <div
-                          class="h-2 w-2 rounded-full"
-                          [style.background-color]="project.color"
-                        ></div>
-                        <span class="text-sm">{{ project.name }}</span>
-                      </div>
-                    }
-                  </td>
-                  <td class="px-4 py-3">
-                    <app-status-badge [status]="task.status" />
-                  </td>
-                  <td class="px-4 py-3">
-                    <app-priority-badge [priority]="task.priority" />
-                  </td>
-                  <td class="px-4 py-3">
-                    @if (task.dueDate) {
-                      <span class="text-sm text-muted-foreground">
-                        {{ task.dueDate | date: 'MMM d, yyyy' }}
-                      </span>
-                    } @else {
-                      <span class="text-sm text-muted-foreground">-</span>
-                    }
-                  </td>
-                  <td class="px-4 py-3">
-                    @if (task.assignees && task.assignees.length > 0) {
-                      <div class="flex items-center gap-2">
-                        <div
-                          class="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-medium"
-                        >
-                          {{ getAssigneeInitials(task) }}
-                        </div>
-                        <span class="text-sm">
-                          {{ task.assignees[0].firstName }} {{ task.assignees[0].lastName }}
-                        </span>
-                      </div>
-                    } @else {
-                      <span class="text-sm text-muted-foreground">Unassigned</span>
-                    }
-                  </td>
+              <thead class="border-b border-border bg-muted/50">
+                <tr>
+                  <th
+                    (click)="toggleSort('title')"
+                    class="text-left px-4 py-3 text-sm font-medium cursor-pointer hover:bg-muted transition-colors"
+                  >
+                    <div class="flex items-center gap-1">
+                      Title
+                      <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+                        />
+                      </svg>
+                    </div>
+                  </th>
+                  <th class="text-left px-4 py-3 text-sm font-medium">Project</th>
+                  <th
+                    (click)="toggleSort('status')"
+                    class="text-left px-4 py-3 text-sm font-medium cursor-pointer hover:bg-muted transition-colors"
+                  >
+                    <div class="flex items-center gap-1">
+                      Status
+                      <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+                        />
+                      </svg>
+                    </div>
+                  </th>
+                  <th
+                    (click)="toggleSort('priority')"
+                    class="text-left px-4 py-3 text-sm font-medium cursor-pointer hover:bg-muted transition-colors"
+                  >
+                    <div class="flex items-center gap-1">
+                      Priority
+                      <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+                        />
+                      </svg>
+                    </div>
+                  </th>
+                  <th
+                    (click)="toggleSort('dueDate')"
+                    class="text-left px-4 py-3 text-sm font-medium cursor-pointer hover:bg-muted transition-colors"
+                  >
+                    <div class="flex items-center gap-1">
+                      Due Date
+                      <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+                        />
+                      </svg>
+                    </div>
+                  </th>
+                  <th class="text-left px-4 py-3 text-sm font-medium">Assignee</th>
                 </tr>
-              </tbody>
+              </thead>
             </table>
-          </cdk-virtual-scroll-viewport>
-        </div>
-      }
+            <cdk-virtual-scroll-viewport itemSize="56" class="block max-h-96">
+              <table class="w-full">
+                <tbody>
+                  <tr
+                    *cdkVirtualFor="let task of filteredAndSortedTasks(); trackBy: trackByTaskId"
+                    (click)="openTaskModal(task)"
+                    class="border-b border-border cursor-pointer hover:bg-muted/50 transition-colors"
+                  >
+                    <td class="px-4 py-3">
+                      <div class="font-medium text-sm">{{ task.title }}</div>
+                      @if (task.labels && task.labels.length > 0) {
+                        <div class="flex gap-1 mt-1">
+                          @for (label of task.labels; track label.id) {
+                            <span
+                              [style.background-color]="label.color"
+                              class="inline-block rounded-full px-1.5 py-0 text-[10px] font-medium text-white"
+                            >
+                              {{ label.name }}
+                            </span>
+                          }
+                        </div>
+                      }
+                    </td>
+                    <td class="px-4 py-3">
+                      @if (getProjectById(task.projectId); as project) {
+                        <div class="flex items-center gap-2">
+                          <div
+                            class="h-2 w-2 rounded-full"
+                            [style.background-color]="project.color"
+                          ></div>
+                          <span class="text-sm">{{ project.name }}</span>
+                        </div>
+                      }
+                    </td>
+                    <td class="px-4 py-3">
+                      <app-status-badge [status]="task.status" />
+                    </td>
+                    <td class="px-4 py-3">
+                      <app-priority-badge [priority]="task.priority" />
+                    </td>
+                    <td class="px-4 py-3">
+                      @if (task.dueDate) {
+                        <span class="text-sm text-muted-foreground">
+                          {{ task.dueDate | date: 'MMM d, yyyy' }}
+                        </span>
+                      } @else {
+                        <span class="text-sm text-muted-foreground">-</span>
+                      }
+                    </td>
+                    <td class="px-4 py-3">
+                      @if (task.assignees && task.assignees.length > 0) {
+                        <div class="flex items-center gap-2">
+                          <div
+                            class="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-medium"
+                          >
+                            {{ getAssigneeInitials(task) }}
+                          </div>
+                          <span class="text-sm">
+                            {{ task.assignees[0].firstName }} {{ task.assignees[0].lastName }}
+                          </span>
+                        </div>
+                      } @else {
+                        <span class="text-sm text-muted-foreground">Unassigned</span>
+                      }
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </cdk-virtual-scroll-viewport>
+          </div>
+        }
     }
   }
 </div>
 
 <!-- Task Modal -->
-<app-task-modal
-  [task]="selectedTask()"
-  [open]="isModalOpen()"
-  [defaultProjectId]="projectFilter() !== 'all' ? projectFilter() : undefined"
-  (openChange)="onModalOpenChange($event)"
-/>
+@defer (when isModalOpen()) {
+  <app-task-modal
+    [task]="selectedTask()"
+    [open]="isModalOpen()"
+    [defaultProjectId]="projectFilter() !== 'all' ? projectFilter() : undefined"
+    (openChange)="onModalOpenChange($event)"
+  />
+}

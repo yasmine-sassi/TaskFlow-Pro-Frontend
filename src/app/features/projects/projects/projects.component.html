@@ -146,28 +146,30 @@
       }
     </div>
   } @else {
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      @for (project of filteredProjects(); track project.id) {
-        <app-project-card
-          [project]="project"
-          [canEdit]="canEditProject(project)"
-          [isAdmin]="isCurrentUserAdmin()"
-          (archive)="onArchiveProject($event)"
-          (unarchive)="onUnarchiveProject($event)"
-          (projectDeleted)="onDeleteProject($event)"
-          (projectUpdated)="onProjectUpdated($event)"
-          (openEdit)="onOpenEdit($event)"
-        />
-      }
-    </div>
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        @for (project of filteredProjects(); track project.id) {
+          <app-project-card
+            [project]="project"
+            [canEdit]="canEditProject(project)"
+            [isAdmin]="isCurrentUserAdmin()"
+            (archive)="onArchiveProject($event)"
+            (unarchive)="onUnarchiveProject($event)"
+            (projectDeleted)="onDeleteProject($event)"
+            (projectUpdated)="onProjectUpdated($event)"
+            (openEdit)="onOpenEdit($event)"
+          />
+        }
+      </div>
   }
 </div>
 
 <!-- Create Project Modal -->
-<app-project-modal
-  [isOpen]="showModal()"
-  [projectToEdit]="selectedProject()"
-  (close)="showModal.set(false)"
-  (projectCreated)="onProjectCreated($event)"
-  (projectUpdated)="onProjectUpdated($event)"
-/>
+@defer (when showModal()) {
+  <app-project-modal
+    [isOpen]="showModal()"
+    [projectToEdit]="selectedProject()"
+    (close)="showModal.set(false)"
+    (projectCreated)="onProjectCreated($event)"
+    (projectUpdated)="onProjectUpdated($event)"
+  />
+}
