@@ -76,6 +76,7 @@ export class ProjectModalComponent implements OnChanges {
   showOwnerDropdown = signal(false);
   showEditorDropdown = signal(false);
   showViewerDropdown = signal(false);
+  isUsersLoading = signal(false);
 
   constructor() {
     this.form = this.fb.group({
@@ -101,10 +102,13 @@ export class ProjectModalComponent implements OnChanges {
       const open = changes['isOpen'].currentValue;
       if (open) {
         this.draftKey = this.buildDraftKey();
-        this.restoreDraft();
+        // Only restore draft if creating (not editing)
+        if (!this.isEditing) {
+          this.restoreDraft();
+        }
         this.loadUsers();
         // Prefill form when editing
-        if (this.isEditing && this.projectToEdit && !this.hasDraft()) {
+        if (this.isEditing && this.projectToEdit) {
           this.form.patchValue(
             {
               name: this.projectToEdit.name,
@@ -139,11 +143,8 @@ export class ProjectModalComponent implements OnChanges {
         this.formState.clear(oldDraftKey);
       }
 
-      // Restore draft for the new mode
-      this.restoreDraft();
-
-      // Prefill form when editing and no saved draft exists
-      if (this.projectToEdit && !this.hasDraft()) {
+      // When editing, always load from project, never from draft
+      if (this.projectToEdit) {
         this.form.patchValue(
           {
             name: this.projectToEdit.name,
@@ -161,18 +162,39 @@ export class ProjectModalComponent implements OnChanges {
     return !!this.projectToEdit;
   }
 
+  get canEdit(): boolean {
+    const currentUser = this.authService.getCurrentUser();
+    if (!currentUser) return false;
+
+    // Only admins and project owners can edit
+    if (currentUser.role === 'ADMIN') return true;
+    if (this.projectToEdit?.ownerId === currentUser.id) return true;
+
+    return false;
+  }
+
+  get canCreate(): boolean {
+    const currentUser = this.authService.getCurrentUser();
+    if (!currentUser) return false;
+    // Only admins can create projects
+    return currentUser.role === 'ADMIN';
+  }
+
   loadUsers() {
     // Only admins can create projects, but any project member can edit
     // Always load all users so any user can be added when editing
+    this.isUsersLoading.set(true);
     this.usersService
       .getAllUsers()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (users) => {
           this.availableUsers.set(users);
+          this.isUsersLoading.set(false);
         },
         error: (err) => {
           console.error('Failed to load users:', err);
+          this.isUsersLoading.set(false);
         },
       });
   }
@@ -305,10 +327,7 @@ export class ProjectModalComponent implements OnChanges {
     return users;
   }
 
-  isUsersLoading(): boolean {
-    const users = this.availableUsers();
-    return !users || users.length === 0;
-  }
+
 
   getColorName(hexColor: string): string {
     const colorMap: Record<string, string> = {
@@ -326,6 +345,17 @@ export class ProjectModalComponent implements OnChanges {
 
   onSubmit() {
     if (!this.form.valid) return;
+
+    // Check authorization
+    if (!this.isEditing && !this.canCreate) {
+      console.error('Only admins can create projects');
+      return;
+    }
+
+    if (this.isEditing && !this.canEdit) {
+      console.error('Only owner or admin can edit projects');
+      return;
+    }
 
     this.isSubmitting.set(true);
     const formValue = this.form.value as ProjectFormDto;
@@ -429,7 +459,13 @@ export class ProjectModalComponent implements OnChanges {
           });
       }
     } else {
-      // Create new project
+      // Create new project - require exactly 1 owner
+      if (this.selectedOwnerIds().length !== 1) {
+        console.warn('Exactly one owner is required when creating a project');
+        this.isSubmitting.set(false);
+        return;
+      }
+
       const payload = {
         ...formValue,
         ownerId,
@@ -461,11 +497,12 @@ export class ProjectModalComponent implements OnChanges {
 
   private buildDraftKey(): string {
     const userId = this.authService.getCurrentUser()?.id ?? 'anonymous';
-    const scope =
-      this.isEditing && this.projectToEdit
-        ? `project-modal:${this.projectToEdit.id}`
-        : 'project-modal:new';
-    return `draft:${scope}:${userId}`;
+    // For editing, don't use drafts at all - return a non-persistent key
+    if (this.isEditing && this.projectToEdit) {
+      return `no-draft:edit:${this.projectToEdit.id}:${userId}`;
+    }
+    // For creation, use a persistent draft key
+    return `draft:project-modal:new:${userId}`;
   }
 
   private hasDraft(): boolean {
@@ -490,7 +527,8 @@ export class ProjectModalComponent implements OnChanges {
   }
 
   private saveDraft(): void {
-    if (this.skipPersist || !this.isOpen) return;
+    // Only save drafts for creation mode, not for editing
+    if (this.skipPersist || !this.isOpen || this.isEditing) return;
     this.formState.save(this.draftKey, {
       form: this.form.getRawValue(),
       owners: this.selectedOwnerIds(),

@@ -39,12 +39,22 @@ export class SidebarComponent {
   currentUser = this.authService.currentUserSignal;
   UserRole = UserRole;
 
-  navItems: NavItem[] = [
+  private baseNavItems: NavItem[] = [
     { path: '/dashboard', label: 'Dashboard', icon: 'LayoutDashboard' },
     { path: '/projects', label: 'Projects', icon: 'FolderOpen' },
     { path: '/tasks', label: 'Tasks', icon: 'ListTodo' },
     { path: '/board', label: 'Board', icon: 'Kanban' },
   ];
+
+  navItems = computed(() => {
+    const role = this.currentUser()?.role;
+    if (role === UserRole.ADMIN) {
+      return this.baseNavItems.filter(
+        (item) => item.path !== '/dashboard' && item.path !== '/tasks',
+      );
+    }
+    return this.baseNavItems;
+  });
 
   get bottomNavItems() {
     return [

@@ -32,7 +32,7 @@
 
     <!-- Main Navigation -->
     <nav class="flex-1 space-y-1 p-3">
-      @for (item of navItems; track item.path) {
+      @for (item of navItems(); track item.path) {
       <a
         [routerLink]="item.path"
         routerLinkActive="bg-sidebar-accent text-sidebar-accent-foreground"
