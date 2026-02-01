@@ -11,6 +11,7 @@ import {
   inject,
   signal,
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
@@ -48,6 +49,8 @@ import { LucideIconComponent } from '../../../shared/components/lucide-icon/luci
 import { LabelsService } from '../../../core/services/labels.service';
 import { UsersService } from '../../../core/services/users.service';
 import { FormStateService } from '../../../core/services/form-state.service';
+import { CommentsService } from '../../../core/services/comments.service';
+import { AttachmentsService } from '../../../core/services/attachments.service';
 
 @Component({
   selector: 'app-task-modal',
@@ -86,12 +89,15 @@ export class TaskModalComponent implements OnInit, OnDestroy {
   // Services
   private fb = inject(FormBuilder);
   private destroyRef = inject(DestroyRef);
+  private cdr = inject(ChangeDetectorRef);
   private tasksService = inject(TasksService);
   private projectsService = inject(ProjectsService);
   private authService = inject(AuthService);
   private labelsService = inject(LabelsService);
   private usersService = inject(UsersService);
   private formState = inject(FormStateService);
+  private commentsService = inject(CommentsService);
+  private attachmentsService = inject(AttachmentsService);
 
   private draftKey = '';
   private skipPersist = false;
@@ -278,8 +284,20 @@ export class TaskModalComponent implements OnInit, OnDestroy {
           this.assignees = this.normalizeUsers(users);
         });
       this.subtasks = [...(this.task.subtasks || [])];
-      this.comments = [...(this.task.comments || [])];
-      this.attachments = [...(this.task.attachments || [])];
+      // Load comments from backend
+      this.commentsService.getCommentsByTask(this.task.id)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe((comments) => {
+          this.comments = comments;
+          this.cdr.markForCheck();
+        });
+      // Load attachments from backend
+      this.attachmentsService.getAttachmentsByTask(this.task.id)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe((attachments) => {
+          this.attachments = attachments;
+          this.cdr.markForCheck();
+        });
     } else {
       this.taskForm.reset(
         {
@@ -501,16 +519,35 @@ export class TaskModalComponent implements OnInit, OnDestroy {
   }
 
   onAddComment(commentData: { content: string; mentions: string[] }) {
-    const newComment: Comment = {
-      id: 'comment-' + Date.now(),
-      content: commentData.content,
-      taskId: this.task?.id || '',
-      userId: this.currentUser?.id || '1',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    this.comments = [...this.comments, newComment];
-    this.saveDraft();
+    // Only persist to backend if task exists (edit mode)
+    if (this.task?.id) {
+      this.commentsService.createComment({
+        taskId: this.task.id,
+        content: commentData.content,
+      })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (newComment) => {
+          this.comments = [...this.comments, newComment];
+          this.cdr.markForCheck();
+        },
+        error: (error) => {
+          console.error('Failed to add comment:', error);
+        }
+      });
+    } else {
+      // In create mode, just add to local array (will be handled after task creation)
+      const newComment: Comment = {
+        id: 'comment-' + Date.now(),
+        content: commentData.content,
+        taskId: '',
+        userId: this.currentUser?.id || '1',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      this.comments = [...this.comments, newComment];
+      this.saveDraft();
+    }
   }
 
   onAddAttachment(attachmentData: {
@@ -519,23 +556,61 @@ export class TaskModalComponent implements OnInit, OnDestroy {
     mimeType: string;
     fileSize: number;
   }) {
-    const newAttachment: Attachment = {
-      id: 'attach-' + Date.now(),
-      fileName: attachmentData.fileName,
-      fileUrl: attachmentData.fileUrl,
-      mimeType: attachmentData.mimeType,
-      fileSize: attachmentData.fileSize,
-      taskId: this.task?.id || '',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    this.attachments = [...this.attachments, newAttachment];
-    this.saveDraft();
+    // Only persist to backend if task exists (edit mode)
+    if (this.task?.id) {
+      this.attachmentsService.createAttachment({
+        taskId: this.task.id,
+        fileName: attachmentData.fileName,
+        fileUrl: attachmentData.fileUrl,
+        mimeType: attachmentData.mimeType,
+        fileSize: attachmentData.fileSize,
+      })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (newAttachment) => {
+          this.attachments = [...this.attachments, newAttachment];
+          this.cdr.markForCheck();
+        },
+        error: (error) => {
+          console.error('Failed to add attachment:', error);
+        }
+      });
+    } else {
+      // In create mode, just add to local array (will be handled after task creation)
+      const newAttachment: Attachment = {
+        id: 'attach-' + Date.now(),
+        fileName: attachmentData.fileName,
+        fileUrl: attachmentData.fileUrl,
+        mimeType: attachmentData.mimeType,
+        fileSize: attachmentData.fileSize,
+        taskId: '',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      this.attachments = [...this.attachments, newAttachment];
+      this.saveDraft();
+    }
   }
 
   onRemoveAttachment(id: string) {
-    this.attachments = this.attachments.filter((a) => a.id !== id);
-    this.saveDraft();
+    // Only delete from backend if it's a real attachment (not a temporary one)
+    if (this.task?.id && id && !id.startsWith('attach-')) {
+      this.attachmentsService.deleteAttachment(id)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: () => {
+            this.attachments = this.attachments.filter((a) => a.id !== id);
+            this.cdr.markForCheck();
+          },
+          error: (error) => {
+            console.error('Failed to delete attachment:', error);
+          }
+        });
+    } else {
+      // Remove from local array only (temporary attachment)
+      this.attachments = this.attachments.filter((a) => a.id !== id);
+      this.saveDraft();
+    }
   }
 
   getCommentsCount(): number {
