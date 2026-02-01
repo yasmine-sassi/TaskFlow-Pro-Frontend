@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ScrollingModule } from '@angular/cdk/scrolling';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { TasksService, FilterTaskDto } from '../../../core/services/task.service';
@@ -48,6 +49,7 @@ const statusOrder: Record<TaskStatus, number> = {
   imports: [
     CommonModule,
     FormsModule,
+    ScrollingModule,
     TaskCardComponent,
     TaskModalComponent,
     EmptyStateComponent,
@@ -68,6 +70,7 @@ export class TasksComponent implements OnInit {
   // State signals
   isLoading = signal(true);
   tasks = signal<Task[]>([]);
+  private tasksVersion = signal(0);
   selectedTask = signal<Task | null>(null);
   isModalOpen = signal(false);
 
@@ -89,12 +92,26 @@ export class TasksComponent implements OnInit {
   availableProjects = this.projectsService.projects;
   availableLabels = this.labelsService.labels;
 
+  private sortedCache = new Map<string, Task[]>();
+
   // Computed
   filteredAndSortedTasks = computed(() => {
+    const version = this.tasksVersion();
+    const query = this.searchQuery().toLowerCase();
+    const status = this.statusFilter();
+    const priority = this.priorityFilter();
+    const project = this.projectFilter();
+    const label = this.labelFilter();
+    const sortField = this.sortField();
+    const sortOrder = this.sortOrder();
+
+    const cacheKey = `${version}|${query}|${status}|${priority}|${project}|${label}|${sortField}|${sortOrder}`;
+    const cached = this.sortedCache.get(cacheKey);
+    if (cached) return cached;
+
     let result = [...this.tasks()];
 
     // Search filter
-    const query = this.searchQuery().toLowerCase();
     if (query) {
       result = result.filter(
         (task) =>
@@ -104,30 +121,30 @@ export class TasksComponent implements OnInit {
     }
 
     // Status filter
-    if (this.statusFilter() !== 'all') {
-      result = result.filter((task) => task.status === this.statusFilter());
+    if (status !== 'all') {
+      result = result.filter((task) => task.status === status);
     }
 
     // Priority filter
-    if (this.priorityFilter() !== 'all') {
-      result = result.filter((task) => task.priority === this.priorityFilter());
+    if (priority !== 'all') {
+      result = result.filter((task) => task.priority === priority);
     }
 
     // Project filter
-    if (this.projectFilter() !== 'all') {
-      result = result.filter((task) => task.projectId === this.projectFilter());
+    if (project !== 'all') {
+      result = result.filter((task) => task.projectId === project);
     }
 
     // Label filter
-    if (this.labelFilter() !== 'all') {
-      result = result.filter((task) => task.labels?.some((l) => l.id === this.labelFilter()));
+    if (label !== 'all') {
+      result = result.filter((task) => task.labels?.some((l) => l.id === label));
     }
 
     // Sort
-    result.sort((a, b) => {
+    result = [...result].sort((a, b) => {
       let comparison = 0;
 
-      switch (this.sortField()) {
+      switch (sortField) {
         case 'title':
           comparison = a.title.localeCompare(b.title);
           break;
@@ -144,9 +161,13 @@ export class TasksComponent implements OnInit {
           break;
       }
 
-      return this.sortOrder() === 'asc' ? comparison : -comparison;
+      return sortOrder === 'asc' ? comparison : -comparison;
     });
 
+    if (this.sortedCache.size > 20) {
+      this.sortedCache.clear();
+    }
+    this.sortedCache.set(cacheKey, result);
     return result;
   });
 
@@ -221,6 +242,7 @@ export class TasksComponent implements OnInit {
         .subscribe({
           next: (response) => {
             this.tasks.set(response.data);
+            this.tasksVersion.update((v) => v + 1);
             this.isLoading.set(false);
           },
           error: (error) => {
@@ -235,6 +257,7 @@ export class TasksComponent implements OnInit {
         .subscribe({
           next: (response) => {
             this.tasks.set(response);
+            this.tasksVersion.update((v) => v + 1);
             this.isLoading.set(false);
           },
           error: (error) => {
@@ -331,4 +354,6 @@ export class TasksComponent implements OnInit {
     const first = assignees[0];
     return first.firstName?.charAt(0)?.toUpperCase() || 'U';
   }
+
+  trackByTaskId = (_index: number, task: Task) => task.id;
 }

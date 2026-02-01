@@ -253,9 +253,12 @@
                 <th class="text-left px-4 py-3 text-sm font-medium">Assignee</th>
               </tr>
             </thead>
-            <tbody>
-              @for (task of filteredAndSortedTasks(); track task.id) {
+          </table>
+          <cdk-virtual-scroll-viewport itemSize="56" class="block max-h-96">
+            <table class="w-full">
+              <tbody>
                 <tr
+                  *cdkVirtualFor="let task of filteredAndSortedTasks(); trackBy: trackByTaskId"
                   (click)="openTaskModal(task)"
                   class="border-b border-border cursor-pointer hover:bg-muted/50 transition-colors"
                 >
@@ -317,9 +320,9 @@
                     }
                   </td>
                 </tr>
-              }
-            </tbody>
-          </table>
+              </tbody>
+            </table>
+          </cdk-virtual-scroll-viewport>
         </div>
       }
     }

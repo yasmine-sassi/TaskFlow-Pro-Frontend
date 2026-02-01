@@ -25,10 +25,8 @@ import {
   AsyncValidatorFn,
 } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { debounceTime, distinctUntilChanged, map, catchError } from 'rxjs/operators';
-import { of } from 'rxjs';
-import { FormStateService } from '../../../core/services/form-state.service';
-
+import { debounceTime, distinctUntilChanged, map, catchError, switchMap, startWith } from 'rxjs/operators';
+import { of, merge, firstValueFrom } from 'rxjs';
 import { LabelSelectComponent } from '../label-select/label-select.component';
 import { CommentSectionComponent } from '../comment-section/comment-section.component';
 import { AttachmentSectionComponent } from '../attachment-section/attachment-section.component';
@@ -49,6 +47,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { LucideIconComponent } from '../../../shared/components/lucide-icon/lucide-icon.component';
 import { LabelsService } from '../../../core/services/labels.service';
 import { UsersService } from '../../../core/services/users.service';
+import { FormStateService } from '../../../core/services/form-state.service';
 
 @Component({
   selector: 'app-task-modal',
@@ -148,18 +147,31 @@ export class TaskModalComponent implements OnInit, OnDestroy {
     // Only set up subscriptions, NOT data initialization
     // Data initialization happens in ngOnChanges
 
-    this.startDateControl.valueChanges
+    merge(
+      this.startDateControl.valueChanges.pipe(
+        map((value) => ({ type: 'startDate' as const, value }))
+      ),
+      this.projectIdControl.valueChanges.pipe(
+        map((value) => ({ type: 'projectId' as const, value }))
+      )
+    )
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((value) => {
-        this.updateDueDateAvailability(value);
+      .subscribe((event) => {
+        if (event.type === 'startDate') {
+          this.updateDueDateAvailability(event.value);
+        } else {
+          this.updateAssigneesAvailability(event.value);
+        }
       });
 
     this.projectIdControl.valueChanges
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((projectId) => {
-        this.updateAssigneesAvailability(projectId);
-        this.loadAssignees();
-        this.saveDraft();
+      .pipe(
+        startWith(this.projectIdControl.value),
+        switchMap((projectId) => this.fetchAssignees$(projectId)),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((users) => {
+        this.assignees = this.normalizeUsers(users);
       });
 
     this.taskForm.valueChanges
@@ -209,41 +221,18 @@ export class TaskModalComponent implements OnInit, OnDestroy {
           },
         });
     }
-
-    // Load users/assignees
-    this.loadAssignees();
   }
 
-  loadAssignees() {
+  private fetchAssignees$(projectId: string | null | undefined) {
     if (this.currentUser?.role === 'ADMIN') {
-      // Load all users for admin
-      this.usersService
-        .getAllUsers()
-        .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe({
-          next: (users) => {
-            this.assignees = this.normalizeUsers(users);
-          },
-        });
-    } else if (this.projectIdControl.value) {
-      const projectId = this.projectIdControl.value;
-      // Load assignable users for the project
-      if (!projectId) {
-        return;
-      }
-      this.usersService
-        .getAssignableUsers(projectId)
-        .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe({
-          next: (users) => {
-            this.assignees = this.normalizeUsers(users);
-            // Don't auto-populate assignees in CREATE mode - let user choose
-          },
-        });
-    } else {
-      // No project selected - no users available
-      this.assignees = [];
+      return this.usersService.getAllUsers();
     }
+
+    if (projectId) {
+      return this.usersService.getAssignableUsers(projectId);
+    }
+
+    return of([] as User[]);
   }
 
   private normalizeUsers(users: User[]): User[] {
@@ -278,9 +267,6 @@ export class TaskModalComponent implements OnInit, OnDestroy {
       this.subtasks = [...(this.task.subtasks || [])];
       this.comments = [...(this.task.comments || [])];
       this.attachments = [...(this.task.attachments || [])];
-
-      // Load assignees for this project
-      this.loadAssignees();
     } else {
       this.taskForm.reset(
         {
@@ -323,7 +309,7 @@ export class TaskModalComponent implements OnInit, OnDestroy {
     return !!this.task;
   }
 
-  onSubmit(event: Event) {
+  async onSubmit(event: Event) {
     event.preventDefault();
 
     if (this.taskForm.invalid) {
@@ -369,19 +355,14 @@ export class TaskModalComponent implements OnInit, OnDestroy {
         }),
       };
 
-      this.tasksService
-        .updateTask(this.task.id, taskData)
-        .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe({
-          next: () => {
-            this.formState.clear(this.draftKey);
-            this.openChange.emit(false);
-            this.resetForm();
-          },
-          error: (error) => {
-            console.error('Failed to update task:', error);
-          },
-        });
+      try {
+        await firstValueFrom(this.tasksService.updateTask(this.task.id, taskData));
+        this.formState.clear(this.draftKey);
+        this.openChange.emit(false);
+        this.resetForm();
+      } catch {
+        // No-op
+      }
     } else {
       const createPayload = {
         title: this.titleControl.value,
@@ -394,37 +375,27 @@ export class TaskModalComponent implements OnInit, OnDestroy {
         labelIds,
       };
 
-      this.tasksService
-        .createTask(createPayload as any)
-        .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe({
-          next: () => {
-            this.formState.clear(this.draftKey);
-            this.openChange.emit(false);
-            this.resetForm();
-          },
-          error: (error) => {
-            console.error('Failed to create task:', error);
-          },
-        });
+      try {
+        await firstValueFrom(this.tasksService.createTask(createPayload as any));
+        this.formState.clear(this.draftKey);
+        this.openChange.emit(false);
+        this.resetForm();
+      } catch {
+        // No-op
+      }
     }
   }
 
-  onDelete() {
+  async onDelete() {
     if (this.task && confirm('Are you sure you want to delete this task?')) {
-      this.tasksService
-        .deleteTask(this.task.id)
-        .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe({
-          next: () => {
-            this.formState.clear(this.draftKey);
-            this.openChange.emit(false);
-            this.resetForm();
-          },
-          error: (error) => {
-            console.error('Failed to delete task:', error);
-          },
-        });
+      try {
+        await firstValueFrom(this.tasksService.deleteTask(this.task.id));
+        this.formState.clear(this.draftKey);
+        this.openChange.emit(false);
+        this.resetForm();
+      } catch {
+        // No-op
+      }
     }
   }
 
@@ -563,18 +534,15 @@ export class TaskModalComponent implements OnInit, OnDestroy {
     this.saveDraft();
   }
 
-  onCreateLabel(payload: { name: string; color: string }) {
-    this.labelsService
-      .createLabel(payload)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (label) => {
-          this.availableLabels = [...this.availableLabels, label];
-          this.labelsControl.setValue([...this.labelsControl.value, label]);
-          this.saveDraft();
-        },
-        error: () => {},
-      });
+  async onCreateLabel(payload: { name: string; color: string }) {
+    try {
+      const label = await firstValueFrom(this.labelsService.createLabel(payload));
+      this.availableLabels = [...this.availableLabels, label];
+      this.labelsControl.setValue([...this.labelsControl.value, label]);
+      this.saveDraft();
+    } catch {
+      // No-op
+    }
   }
 
   onFieldChange() {
@@ -617,14 +585,9 @@ export class TaskModalComponent implements OnInit, OnDestroy {
       deletedSubtaskIds: string[];
     }>(this.draftKey);
 
-    console.log('🔍 restoreDraft() called, saved data:', saved);
-
     if (!saved) {
-      console.log('⚠️ No saved draft found');
       return;
     }
-
-    console.log('📋 Restoring form data:', saved.formData);
     this.skipPersist = true;
     this.taskForm.patchValue(
       {
@@ -641,7 +604,6 @@ export class TaskModalComponent implements OnInit, OnDestroy {
       },
       { emitEvent: false },
     );
-    console.log('✅ Form patched. Current form value:', this.taskForm.getRawValue());
     this.updateDueDateAvailability(this.startDateControl.value);
     this.subtasks = saved.subtasks ?? [];
     this.comments = saved.comments ?? [];
@@ -649,16 +611,13 @@ export class TaskModalComponent implements OnInit, OnDestroy {
     this.activeTab = saved.activeTab ?? 'details';
     this.deletedSubtaskIds = new Set(saved.deletedSubtaskIds ?? []);
     this.skipPersist = false;
-    console.log('✅ Draft restoration complete');
   }
 
   private saveDraft(): void {
     // Only save draft for CREATE mode, not EDIT mode
     if (this.skipPersist || !this.draftKey || !this.open || this.isEditing) {
-      if (this.isEditing) console.log('🚫 Not saving - in EDIT mode');
       return;
     }
-    console.log('💾 Saving task modal draft:', this.draftKey);
     this.formState.save(this.draftKey, {
       formData: {
         ...this.taskForm.getRawValue(),
@@ -783,11 +742,7 @@ export class TaskModalComponent implements OnInit, OnDestroy {
           // If title is taken, return validation error
           return isTaken ? { titleTaken: { value: title } } : null;
         }),
-        catchError(() => {
-          // If API call fails, allow the submission to proceed
-          console.warn('Failed to validate task title uniqueness');
-          return of(null);
-        }),
+        catchError(() => of(null)),
       );
     };
   }
