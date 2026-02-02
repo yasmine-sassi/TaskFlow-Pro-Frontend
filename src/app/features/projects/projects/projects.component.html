@@ -202,4 +202,22 @@
     (projectCreated)="onProjectCreated($event)"
     (projectUpdated)="onProjectUpdated($event)"
   />
+} @loading (minimum 100ms) {
+  <!-- Modal loading skeleton -->
+  <div class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
+    <div class="bg-white rounded-lg shadow-xl p-6 max-w-xl w-full mx-4 animate-pulse">
+      <div class="h-8 bg-gray-200 rounded w-1/2 mb-4"></div>
+      <div class="space-y-3">
+        <div class="h-4 bg-gray-200 rounded"></div>
+        <div class="h-4 bg-gray-200 rounded w-4/5"></div>
+      </div>
+    </div>
+  </div>
+} @error {
+  <!-- Error fallback -->
+  <div class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
+    <div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+      <p class="text-red-600">Failed to load project modal. Please try again.</p>
+    </div>
+  </div>
 }
