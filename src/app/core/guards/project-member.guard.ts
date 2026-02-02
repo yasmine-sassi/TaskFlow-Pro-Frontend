@@ -2,6 +2,7 @@ import { inject } from '@angular/core';
 import { Router, CanActivateFn } from '@angular/router';
 import { map, catchError } from 'rxjs/operators';
 import { of } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ProjectsService } from '../services/projects.service';
 import { AuthService } from '../services/auth.service';
 import { UserRole } from '../models/user.model';
@@ -51,10 +52,8 @@ export function projectMemberGuard(config: ProjectMemberGuardConfig = {}): CanAc
       return true;
     }
 
-    // Check if user is a project member with sufficient role
-    const members = projectsService.getProjectMembers(projectId)();
-
-    return of(members).pipe(
+    // Load members from API (or cache if already loaded)
+    return projectsService.loadProjectMembers(projectId).pipe(
       map((members) => {
         const member = members.find((m) => m.userId === user?.id);
 
@@ -78,10 +77,19 @@ export function projectMemberGuard(config: ProjectMemberGuardConfig = {}): CanAc
         return true;
       }),
       catchError((error) => {
+        // Handle 403 Forbidden as "user not a member"
+        if (error instanceof HttpErrorResponse && error.status === 403) {
+          console.warn(`User not authorized for project ${projectId}`);
+          router.navigate(['/projects'], {
+            queryParams: { error: 'not-a-member' },
+          });
+          return of(false);
+        }
+
         console.error('Error checking project membership', error);
         router.navigate(['/projects']);
         return of(false);
-      })
+      }),
     );
   };
 }

@@ -1,0 +1,131 @@
+<div class="space-y-6 sticky top-6 max-h-[calc(100vh-8rem)] overflow-y-auto">
+  <!-- Header -->
+  <div class="flex items-start justify-between">
+    <h2 class="text-xl font-semibold text-foreground">Project Details</h2>
+    <button
+      (click)="onClose()"
+      type="button"
+      class="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:bg-muted transition-colors"
+      title="Close"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Loading State -->
+  @if (isLoading()) {
+    <div class="flex items-center justify-center py-8">
+      <div
+        class="inline-flex items-center justify-center h-6 w-6 rounded-full border-2 border-primary border-t-transparent animate-spin"
+      ></div>
+      <span class="ml-2 text-sm text-muted-foreground">Loading...</span>
+    </div>
+  }
+
+  <!-- Error State -->
+  @if (error()) {
+    <div class="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+      {{ error() }}
+    </div>
+  }
+
+  <!-- Project Content -->
+  @if (project() && !isLoading()) {
+    <div class="space-y-6">
+      <!-- Project Name -->
+      <div>
+        <h3 class="text-2xl font-bold text-foreground">{{ project()!.name }}</h3>
+        @if (project()!.description) {
+          <p class="text-sm text-muted-foreground mt-2">{{ project()!.description }}</p>
+        }
+      </div>
+
+      <!-- Project Color -->
+      <div class="space-y-2">
+        <label class="text-xs font-medium text-muted-foreground">Color</label>
+        <div class="flex items-center gap-2">
+          <div
+            class="h-8 w-8 rounded-md border border-border"
+            [style.background-color]="project()!.color"
+          ></div>
+          <span class="text-sm text-foreground">{{ project()!.color }}</span>
+        </div>
+      </div>
+
+      <!-- Archive Status -->
+      @if (project()!.isArchived) {
+        <div class="rounded-md border border-warning/20 bg-warning/10 p-3">
+          <p class="text-xs font-medium text-warning">This project is archived</p>
+        </div>
+      }
+
+      <!-- Task Progress -->
+      <div class="space-y-3 rounded-lg border border-border bg-card p-4">
+        <h4 class="text-sm font-medium text-foreground">Tasks Progress</h4>
+        <div class="space-y-2">
+          <div class="flex justify-between text-xs text-muted-foreground">
+            <span>{{ getCompletedTaskCount() }} of {{ getTaskCount() }} completed</span>
+            <span>{{ getProgressPercentage() | number: '1.0-0' }}%</span>
+          </div>
+          <div class="h-2 rounded-full bg-muted overflow-hidden">
+            <div
+              class="h-full bg-primary transition-all duration-300"
+              [style.width.%]="getProgressPercentage()"
+            ></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Team Members -->
+      <div class="space-y-3 rounded-lg border border-border bg-card p-4">
+        <h4 class="text-sm font-medium text-foreground">Team Members ({{ getMemberCount() }})</h4>
+        @if (project()?.members?.length || 0 > 0) {
+          <div class="space-y-2 max-h-40 overflow-y-auto">
+            @for (member of project()!.members; track member.id) {
+              <div class="flex items-center gap-2 text-sm">
+                <div class="h-6 w-6 rounded-full bg-muted flex items-center justify-center">
+                  <span class="text-xs font-medium text-foreground">
+                    {{ getInitial(member) }}
+                  </span>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-foreground truncate">
+                    {{ getName(member) }}
+                  </p>
+                  <p class="text-xs text-muted-foreground">{{ member.role }}</p>
+                </div>
+              </div>
+            }
+          </div>
+        } @else {
+          <p class="text-xs text-muted-foreground">No team members</p>
+        }
+      </div>
+
+      <!-- Project Stats -->
+      <div class="grid grid-cols-2 gap-3">
+        <div class="rounded-lg border border-border bg-card p-3">
+          <p class="text-xs text-muted-foreground">Total Tasks</p>
+          <p class="text-lg font-semibold text-foreground">{{ getTaskCount() }}</p>
+        </div>
+        <div class="rounded-lg border border-border bg-card p-3">
+          <p class="text-xs text-muted-foreground">Team Size</p>
+          <p class="text-lg font-semibold text-foreground">{{ getMemberCount() }}</p>
+        </div>
+      </div>
+    </div>
+  }
+</div>

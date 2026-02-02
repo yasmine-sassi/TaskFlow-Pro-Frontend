@@ -24,6 +24,7 @@ export class ProjectCardComponent {
   @Input() isAdmin = false;
   @Output() projectDeleted = new EventEmitter<string>();
   @Output() projectUpdated = new EventEmitter<Project>();
+  @Output() selectProject = new EventEmitter<Project>();
   @Output() openEdit = new EventEmitter<Project>();
   @Output() archive = new EventEmitter<Project>();
   @Output() unarchive = new EventEmitter<Project>();
@@ -110,6 +111,10 @@ export class ProjectCardComponent {
     const total = this.getTaskCount();
     if (total === 0) return 0;
     return (this.getCompletedTaskCount() / total) * 100;
+  }
+
+  onSelectProject() {
+    this.selectProject.emit(this.project);
   }
 
   onOpenEdit(event?: MouseEvent) {

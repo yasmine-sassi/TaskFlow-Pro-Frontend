@@ -4,6 +4,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { FormStateService } from '../../../core/services/form-state.service';
+import { UserRole } from '../../../core/models/user.model';
 import { noSpacesValidator, passwordStrengthValidator } from '../../../shared/validators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
@@ -66,7 +67,10 @@ export class Login {
         .subscribe({
           next: () => {
             this.formState.clear(this.draftKey);
-            this.router.navigate(['/dashboard']);
+            // Redirect admin users to admin dashboard, others to regular dashboard
+            const user = this.authService.currentUserSignal();
+            const redirectPath = user?.role === UserRole.ADMIN ? '/admin' : '/dashboard';
+            this.router.navigate([redirectPath]);
           },
           error: (error) => {
             this.errorMessage.set(error.message);

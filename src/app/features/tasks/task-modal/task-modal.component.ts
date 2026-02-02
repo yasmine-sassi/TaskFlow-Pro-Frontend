@@ -129,7 +129,8 @@ export class TaskModalComponent implements OnInit, OnDestroy {
     { validators: [this.dateRangeValidator('startDate', 'dueDate')] },
   );
 
-  constructor() {}
+  constructor() {
+  }
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['open']?.currentValue && !changes['open'].previousValue) {

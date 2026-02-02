@@ -41,7 +41,7 @@ export class RegisterComponent {
       firstName: ['', [Validators.required, noSpacesValidator({ trim: true })]],
       lastName: ['', [Validators.required, noSpacesValidator({ trim: true })]],
 
-      // Validate email on blur (includes async unique-email)
+      // Validate email in real-time (includes async unique-email check)
       email: this.fb.control('', {
         validators: [
           Validators.required,
@@ -49,7 +49,7 @@ export class RegisterComponent {
           noSpacesValidator({ allowInternal: false }),
         ],
         asyncValidators: [this.uniqueEmailValidator.validate()],
-        updateOn: 'blur',
+        updateOn: 'change', // Real-time validation
       }),
 
       // Validate password on blur to show strength errors after finishing typing

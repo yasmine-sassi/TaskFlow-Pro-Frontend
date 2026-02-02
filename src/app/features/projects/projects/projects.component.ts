@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router, ActivatedRoute } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ProjectsService } from '../../../core/services/projects.service';
 import { AuthService } from '../../../core/services/auth.service';
@@ -17,11 +18,12 @@ import { Project, ProjectMemberRole } from '../../../core/models/project.model';
 import { UserRole } from '../../../core/models/user.model';
 import { ProjectCardComponent } from '../project-card/project-card.component';
 import { ProjectModalComponent } from '../project-modal/project-modal.component';
+import { ProjectDetailsComponent } from '../project-details/project-details.component';
 
 @Component({
   selector: 'app-projects.component',
   standalone: true,
-  imports: [CommonModule, FormsModule, ProjectCardComponent, ProjectModalComponent],
+  imports: [CommonModule, FormsModule, ProjectCardComponent, ProjectModalComponent, ProjectDetailsComponent],
   templateUrl: './projects.component.html',
   styleUrls: ['./projects.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -29,6 +31,8 @@ import { ProjectModalComponent } from '../project-modal/project-modal.component'
 export class ProjectsComponent {
   private projectsService = inject(ProjectsService);
   private authService = inject(AuthService);
+  private router = inject(Router);
+  private activatedRoute = inject(ActivatedRoute);
   private destroyRef = inject(DestroyRef);
 
   currentUser = this.authService.currentUserSignal;
@@ -40,6 +44,7 @@ export class ProjectsComponent {
   showModal = signal(false);
   selectedProject = signal<Project | null>(null);
   isLoading = signal(false);
+  selectedProjectId = signal<string | null>(null);
   // Admin-only: filter by archive state
   adminFilter = signal<'all' | 'active' | 'archived'>('all');
 
@@ -92,6 +97,14 @@ export class ProjectsComponent {
 
   // Memoize empty state creation button visibility
   showCreateInEmptyState = computed(() => !this.searchQuery() && this.isCurrentUserAdmin());
+
+  // Compute the currently selected project from the projects list based on selectedProjectId
+  currentProjectFromList = computed(() => {
+    const projectId = this.selectedProjectId();
+    if (!projectId) return null;
+    return this.projects().find((p) => p.id === projectId) || null;
+  });
+
   constructor() {
     // Load projects when the current user is available.
     // Use untracked() to avoid re-running due to service cache updates.
@@ -102,6 +115,15 @@ export class ProjectsComponent {
         return;
       }
       untracked(() => this.loadProjects());
+    });
+
+    // Listen to route params to show project details panel
+    effect(() => {
+      this.activatedRoute.params
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe((params) => {
+          this.selectedProjectId.set(params['projectId'] || null);
+        });
     });
   }
 
@@ -139,11 +161,31 @@ export class ProjectsComponent {
   onProjectUpdated(updatedProject: Project) {
     this.projects.update((current) =>
       this.filterVisibleProjects(
-        current.map((p) => (p.id === updatedProject.id ? updatedProject : p)),
+        current.map((p) => {
+          if (p.id === updatedProject.id) {
+            // Preserve tasks and members from the old project if the updated project doesn't have them
+            return {
+              ...updatedProject,
+              tasks: updatedProject.tasks ?? p.tasks,
+              members: updatedProject.members ?? p.members,
+            };
+          }
+          return p;
+        }),
       ),
     );
+    
+    // Update the selected project if it's currently open in the details panel
+    const current = this.selectedProject();
+    if (current && current.id === updatedProject.id) {
+      this.selectedProject.set({
+        ...updatedProject,
+        tasks: updatedProject.tasks ?? current.tasks,
+        members: updatedProject.members ?? current.members,
+      });
+    }
+    
     this.showModal.set(false);
-    this.selectedProject.set(null);
   }
 
   onDeleteProject(projectId: string) {
@@ -160,6 +202,13 @@ export class ProjectsComponent {
       });
   }
 
+  onSelectProject(project: Project) {
+    // Navigate to show project details panel on the same page
+    // Update selectedProject so we can pass it to the details component
+    this.selectedProject.set(project);
+    this.router.navigate(['/projects', project.id]);
+  }
+
   onOpenEdit(project: Project) {
     const user = this.currentUser();
     if (!user) return;
@@ -167,8 +216,14 @@ export class ProjectsComponent {
     if (!canEdit) {
       return;
     }
+    // Open modal to edit project
     this.selectedProject.set(project);
     this.showModal.set(true);
+  }
+
+  onCloseDetails() {
+    // Navigate back to projects list (removes the projectId param)
+    this.router.navigate(['/projects']);
   }
 
   onCreateNewProject() {

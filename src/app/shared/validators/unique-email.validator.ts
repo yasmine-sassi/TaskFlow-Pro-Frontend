@@ -2,7 +2,8 @@ import { inject, Injectable } from '@angular/core';
 import { AbstractControl, AsyncValidatorFn, ValidationErrors } from '@angular/forms';
 import { Observable, of, timer } from 'rxjs';
 import { map, switchMap, catchError } from 'rxjs';
-import { AuthService } from '../../core/services/auth.service';
+import { HttpClient } from '@angular/common/http';
+import { API_CONFIG } from '../../core/tokens/api-config.token';
 
 /**
  * UNIQUE EMAIL ASYNC VALIDATOR
@@ -46,7 +47,8 @@ import { AuthService } from '../../core/services/auth.service';
   providedIn: 'root',
 })
 export class UniqueEmailValidator {
-  private authService = inject(AuthService);
+  private http = inject(HttpClient);
+  private apiConfig = inject(API_CONFIG);
   private cache = new Map<string, boolean>(); // Cache to avoid duplicate API calls
 
   /**
@@ -85,22 +87,28 @@ export class UniqueEmailValidator {
   }
 
   /**
-   * Mock implementation - Replace with actual API call
-   * 
-   * In a real application, you would call:
-   * this.authService.checkEmailAvailability(email)
+   * Check email availability via API
+   * Calls backend endpoint: GET /auth/check-email?email=...
+   * Returns whether the email is available (not taken)
    */
   private checkEmailAvailability(email: string): Observable<boolean> {
-    // TODO: Replace this mock with actual API call
-    // return this.http.get<{ available: boolean }>(
-    //   this.authService.buildUrl(`/auth/check-email?email=${encodeURIComponent(email)}`)
-    // ).pipe(map(response => response.available));
-
-    // Mock implementation for testing
-    const takenEmails = ['admin@taskflow.dev', 'member@taskflow.dev', 'test@example.com'];
-    const isAvailable = !takenEmails.includes(email.toLowerCase());
+    const apiUrl = `${this.apiConfig.apiUrl}/auth/check-email?email=${encodeURIComponent(email)}`;
+    console.log('Checking email availability:', apiUrl);
     
-    return of(isAvailable); // Simulate API response
+    return this.http.get<any>(apiUrl).pipe(
+      map(response => {
+        console.log('Email check response:', response);
+        // Handle both direct response and wrapped response format
+        const available = response.data?.available !== undefined ? response.data.available : response.available;
+        console.log('Email available:', available);
+        return available;
+      }),
+      catchError((error) => {
+        console.warn('Email availability check failed:', error);
+        // If API call fails, don't block the form
+        return of(true);
+      })
+    );
   }
 
   /**

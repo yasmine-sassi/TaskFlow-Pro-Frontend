@@ -82,7 +82,7 @@
             [ngClass]="canDragDrop() ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'"
           >
             <!-- Task Card Component -->
-            @defer (on viewport; prefetch on idle) {
+            @defer (on interaction; on hover; prefetch on idle) {
               <app-task-card
                 [task]="task"
                 [showProject]="selectedProjectId() === 'all'"
@@ -117,17 +117,3 @@
   }
 </div>
 
-<!-- Modals (to be implemented by Person 1 - Tasks Module) -->
-<!--
-<app-task-modal
-  [task]="selectedTask()"
-  [isOpen]="selectedTask() !== null"
-  (close)="closeTaskDetail()">
-</app-task-modal>
-
-<app-task-modal
-  [isOpen]="isCreateModalOpen()"
-  [defaultProjectId]="selectedProjectId() !== 'all' ? selectedProjectId() : undefined"
-  (close)="closeCreateModal()">
-</app-task-modal>
--->
