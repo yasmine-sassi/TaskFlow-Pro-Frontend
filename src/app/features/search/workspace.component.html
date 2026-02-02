@@ -139,7 +139,7 @@
   </div>
 </div>
 
-@defer (when isTaskModalOpen() && selectedTask()) {
+@if (isTaskModalOpen() && selectedTask()) {
   <div
     id="task-modal-backdrop"
     class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
@@ -214,7 +214,7 @@
 
           <div class="p-4 rounded-xl bg-muted/40 border border-border">
             <div class="flex items-center gap-2 text-muted-foreground text-sm mb-1">
-              <lucide-icon name="clock" [size]="16"></lucide-icon>
+              <lucide-icon name="calendar" [size]="16"></lucide-icon>
               Created
             </div>
             <div class="text-foreground font-medium">
@@ -224,7 +224,7 @@
 
           <div class="p-4 rounded-xl bg-muted/40 border border-border">
             <div class="flex items-center gap-2 text-muted-foreground text-sm mb-1">
-              <lucide-icon name="activity" [size]="16"></lucide-icon>
+              <lucide-icon name="check-circle" [size]="16"></lucide-icon>
               Updated
             </div>
             <div class="text-foreground font-medium">

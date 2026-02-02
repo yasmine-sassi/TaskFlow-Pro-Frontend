@@ -4,6 +4,7 @@ import {
   computed,
   OnInit,
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -43,6 +44,7 @@ interface ProjectWithTasks {
 export class WorkspaceComponent implements OnInit {
   private router = inject(Router);
   private logger = inject(LoggerService);
+  private cdr = inject(ChangeDetectorRef);
   private tasksService = inject(TasksService);
   private projectsService = inject(ProjectsService);
 
@@ -290,6 +292,7 @@ export class WorkspaceComponent implements OnInit {
   closeTaskModal() {
     this.isTaskModalOpen.set(false);
     this.selectedTask.set(null);
+    this.cdr.markForCheck();
   }
 
   /**
@@ -298,6 +301,7 @@ export class WorkspaceComponent implements OnInit {
   onModalBackdropClick(event: MouseEvent) {
     if ((event.target as HTMLElement)?.id === 'task-modal-backdrop') {
       this.closeTaskModal();
+      this.cdr.markForCheck();
     }
   }
 
