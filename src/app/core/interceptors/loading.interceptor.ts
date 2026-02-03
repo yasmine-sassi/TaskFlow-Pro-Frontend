@@ -18,6 +18,6 @@ export const loadingInterceptor: HttpInterceptorFn = (req, next) => {
       if (!skipLoading) {
         loadingService.hide();
       }
-    })
+    }),
   );
 };

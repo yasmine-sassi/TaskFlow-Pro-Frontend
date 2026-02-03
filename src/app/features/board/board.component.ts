@@ -8,21 +8,14 @@ import {
   ChangeDetectionStrategy,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import {
-  CdkDragDrop,
-  DragDropModule,
-  moveItemInArray,
-  transferArrayItem,
-} from '@angular/cdk/drag-drop';
+import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TasksService } from '../../core/services/task.service';
-import { ProjectsService } from '../../core/services/projects.service';
 import { AuthService } from '../../core/services/auth.service';
 import { Task, TaskStatus } from '../../core/models/task.model';
-import { Project } from '../../core/models/project.model';
 import { UserRole } from '../../core/models/user.model';
-import { BOARD_COLUMNS, BoardColumn } from './models/board.model';
+import { BOARD_COLUMNS } from './models/board.model';
 import { TaskCardComponent } from '../tasks/task-card/task-card.component';
 
 @Component({
@@ -36,7 +29,6 @@ import { TaskCardComponent } from '../tasks/task-card/task-card.component';
 export class BoardComponent implements OnInit {
   // Inject services
   private tasksService = inject(TasksService);
-  private projectsService = inject(ProjectsService);
   private authService = inject(AuthService);
   private destroyRef = inject(DestroyRef);
 
@@ -49,17 +41,12 @@ export class BoardComponent implements OnInit {
   // Signals for state management
   selectedProjectId = signal<string>('all');
   dragOverColumn = signal<TaskStatus | null>(null);
-  isCreateModalOpen = signal<boolean>(false);
-  selectedTask = signal<Task | null>(null);
   isLoading = signal<boolean>(false);
   myTasks = signal<Task[]>([]);
 
   // Computed signals
   currentUser = computed(() => this.authService.currentUserSignal());
   isAdmin = computed(() => this.currentUser()?.role === UserRole.ADMIN);
-
-  // Get all tasks assigned to the user
-  allTasks = computed(() => this.myTasks());
 
   // Get unique projects from tasks
   userProjects = computed<{ id: string; name: string }[]>(() => {
@@ -84,7 +71,7 @@ export class BoardComponent implements OnInit {
   // Filter tasks by selected project
   filteredTasks = computed(() => {
     const projectId = this.selectedProjectId();
-    const tasks = this.allTasks();
+    const tasks = this.myTasks();
 
     if (projectId === 'all') {
       return tasks;
@@ -97,9 +84,24 @@ export class BoardComponent implements OnInit {
   canDragDrop = computed(() => !this.isAdmin());
 
   // Group tasks by status
-  getTasksByStatus(status: TaskStatus): Task[] {
-    return this.filteredTasks().filter((task) => task.status === status);
-  }
+  tasksByStatus = computed(() => {
+    const tasks = this.filteredTasks();
+    const grouped: Record<TaskStatus, Task[]> = {
+      [TaskStatus.TODO]: [],
+      [TaskStatus.IN_PROGRESS]: [],
+      [TaskStatus.IN_REVIEW]: [],
+      [TaskStatus.DONE]: [],
+    };
+
+    // Group tasks by status
+    tasks.forEach((task) => {
+      if (grouped[task.status]) {
+        grouped[task.status].push(task);
+      }
+    });
+
+    return grouped;
+  });
 
   // Drag and drop handlers
   onDragStart(task: Task) {
@@ -136,11 +138,11 @@ export class BoardComponent implements OnInit {
       .subscribe({
         next: (updatedTask) => {
           // Update the task in the local array
-          const tasks = this.myTasks();
+          const tasks = [...this.myTasks()];
           const index = tasks.findIndex((t) => t.id === task.id);
           if (index !== -1) {
             tasks[index] = { ...tasks[index], status: newStatus };
-            this.myTasks.set([...tasks]);
+            this.myTasks.set(tasks);
           }
           // Optionally show a toast notification
         },
@@ -148,27 +150,6 @@ export class BoardComponent implements OnInit {
           // Optionally show error notification
         },
       });
-  }
-
-  private getColumnTitle(status: TaskStatus): string {
-    return this.columns.find((col) => col.id === status)?.title || status;
-  }
-
-  // Modal handlers
-  openCreateModal() {
-    this.isCreateModalOpen.set(true);
-  }
-
-  closeCreateModal() {
-    this.isCreateModalOpen.set(false);
-  }
-
-  openTaskDetail(task: Task) {
-    this.selectedTask.set(task);
-  }
-
-  closeTaskDetail() {
-    this.selectedTask.set(null);
   }
 
   // Project filter handler
@@ -200,7 +181,6 @@ export class BoardComponent implements OnInit {
       },
       error: () => {
         this.isLoading.set(false);
-        // Optionally show error notification
       },
     });
   }
