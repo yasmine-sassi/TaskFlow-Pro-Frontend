@@ -44,6 +44,8 @@ export class BoardComponent implements OnInit {
   draggingTaskId = signal<string | null>(null);
   isLoading = signal<boolean>(false);
   myTasks = signal<Task[]>([]);
+  isCreateModalOpen = signal<boolean>(false);
+  selectedTask = signal<Task | null>(null);
 
   // Computed signals
   readonly currentUser = this.authService.currentUserSignal;
@@ -83,6 +85,11 @@ export class BoardComponent implements OnInit {
 
   // Check if admin (admin can't drag/drop)
   canDragDrop = computed(() => !this.isAdmin());
+
+  // Get tasks by status (useful for tests)
+  getTasksByStatus(status: TaskStatus): Task[] {
+    return this.tasksByStatus()[status] ?? [];
+  }
 
   // Group tasks by status
   tasksByStatus = computed(() => {
@@ -126,6 +133,24 @@ export class BoardComponent implements OnInit {
     if (task.status !== targetStatus) {
       this.updateTaskStatus(task, targetStatus);
     }
+  }
+
+  // Task detail handlers
+  openTaskDetail(task: Task) {
+    this.selectedTask.set(task);
+  }
+
+  closeTaskDetail() {
+    this.selectedTask.set(null);
+  }
+
+  // Create modal handlers
+  openCreateModal() {
+    this.isCreateModalOpen.set(true);
+  }
+
+  closeCreateModal() {
+    this.isCreateModalOpen.set(false);
   }
 
   private updateTaskStatus(task: Task, newStatus: TaskStatus) {

@@ -88,11 +88,24 @@
                   "
                 >
                   <!-- Task Card Component -->
-                  <app-task-card
-                    [task]="task"
-                    [showProject]="selectedProjectId() === 'all'"
-                    [isDragging]="draggingTaskId() === task.id"
-                  />
+                  @defer (on interaction; on hover; prefetch on idle) {
+                    <app-task-card
+                      [task]="task"
+                      [showProject]="selectedProjectId() === 'all'"
+                      [isDragging]="false"
+                      (cardClick)="openTaskDetail(task)"
+                    />
+                  } @placeholder {
+                    <div class="h-24 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                      <div class="h-4 w-2/3 rounded bg-gray-200"></div>
+                      <div class="mt-3 h-3 w-1/2 rounded bg-gray-100"></div>
+                    </div>
+                  } @loading {
+                    <div class="h-24 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                      <div class="h-4 w-2/3 rounded bg-gray-200 animate-pulse"></div>
+                      <div class="mt-3 h-3 w-1/2 rounded bg-gray-100 animate-pulse"></div>
+                    </div>
+                  }
 
                   <!-- Drag Preview -->
                   <div
