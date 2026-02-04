@@ -35,7 +35,7 @@
   }
 
   <!-- Kanban Board -->
-  @if (!isLoading()) {
+  @else {
     <div class="board-grid grid grid-cols-1 md:grid-cols-3 gap-4 h-[calc(100%-5rem)]">
       @for (column of columns; track column.id) {
         <div
@@ -48,7 +48,7 @@
           ]"
           cdkDropList
           [id]="'column-' + column.id"
-          [cdkDropListData]="getTasksByStatus(column.id)"
+          [cdkDropListData]="tasksByStatus()[column.id]"
           [cdkDropListConnectedTo]="canDragDrop() ? columnIds() : []"
           [cdkDropListDisabled]="!canDragDrop()"
           (cdkDropListDropped)="onDrop($event, column.id)"
@@ -62,26 +62,26 @@
               <span
                 class="flex h-5 min-w-5 items-center justify-center rounded-full bg-gray-200 px-1.5 text-xs font-medium text-gray-700"
               >
-                {{ getTasksByStatus(column.id).length }}
+                {{ tasksByStatus()[column.id].length }}
               </span>
             </div>
           </div>
 
           <!-- Tasks -->
           <div class="flex-1 space-y-3 overflow-y-auto scrollbar-thin">
-            @if (getTasksByStatus(column.id).length === 0) {
+            @if (tasksByStatus()[column.id].length === 0) {
               <div
                 class="flex h-32 items-center justify-center rounded-lg border-2 border-dashed border-gray-300"
               >
                 <p class="text-sm text-gray-500">No tasks</p>
               </div>
             } @else {
-              @for (task of getTasksByStatus(column.id); track task.id) {
+              @for (task of tasksByStatus()[column.id]; track task.id) {
                 <div
                   cdkDrag
                   [cdkDragData]="task"
                   [cdkDragDisabled]="!canDragDrop()"
-                  (cdkDragStarted)="onDragStart(task)"
+                  (cdkDragStarted)="draggingTaskId.set(task.id)"
                   (cdkDragEnded)="onDragEnd()"
                   [ngClass]="
                     canDragDrop() ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'

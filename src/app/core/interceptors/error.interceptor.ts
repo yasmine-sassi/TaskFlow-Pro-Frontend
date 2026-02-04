@@ -54,11 +54,7 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
       }
 
       console.error('HTTP Error:', errorMessage, error);
-
-      // You can show a toast/snackbar here
-      // this.toastService.error(errorMessage);
-
       return throwError(() => new Error(errorMessage));
-    })
+    }),
   );
 };

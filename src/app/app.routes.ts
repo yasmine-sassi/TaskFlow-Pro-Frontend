@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { userResolver, notificationsResolver } from './core/resolvers';
 import { MainLayoutComponent } from './layout/main-layout/main-layout.component';
+import { adminGuard } from './core/guards/admin.guard';
 
 export const routes: Routes = [
   // ============================================
@@ -33,7 +34,8 @@ export const routes: Routes = [
       // ============================================
       {
         path: 'projects',
-        loadChildren: () => import('./features/projects/projects.routes').then((m) => m.projectsRoutes),
+        loadChildren: () =>
+          import('./features/projects/projects.routes').then((m) => m.projectsRoutes),
       },
 
       // ============================================
@@ -44,10 +46,12 @@ export const routes: Routes = [
         loadChildren: () => import('./features/tasks/tasks.routes').then((m) => m.tasksRoutes),
       },
 
-
       {
         path: 'profile',
-        loadComponent: () => import('./features/profile/profile-form/profile-form.component').then(m => m.ProfileFormComponent),
+        loadComponent: () =>
+          import('./features/profile/profile-form/profile-form.component').then(
+            (m) => m.ProfileFormComponent,
+          ),
         data: { title: 'Edit Profile' },
       },
 
@@ -77,9 +81,10 @@ export const routes: Routes = [
       {
         path: 'notifications',
         loadComponent: () =>
-          import('./features/notifications/notifications/notifications.component').then((m) => m.NotificationsComponent),
+          import('./features/notifications/notifications/notifications.component').then(
+            (m) => m.NotificationsComponent,
+          ),
         data: { title: 'Notifications' },
-        canActivate: [authGuard],
       },
 
       // ============================================
@@ -90,7 +95,6 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/settings/settings.component').then((m) => m.SettingsComponent),
         data: { title: 'Settings' },
-        canActivate: [authGuard],
       },
 
       // ============================================
@@ -99,6 +103,7 @@ export const routes: Routes = [
       {
         path: 'admin',
         loadChildren: () => import('./features/admin/admin.routes').then((m) => m.adminRoutes),
+        canActivate: [adminGuard],
       },
     ],
   },
