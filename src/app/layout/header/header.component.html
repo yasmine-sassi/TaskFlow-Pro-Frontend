@@ -39,48 +39,48 @@
           <lucide-icon name="ChevronDown" [size]="16" class="text-muted-foreground"></lucide-icon>
         </button>
 
-        @if (showUserDropdown) {
-        <div
-          class="absolute right-0 mt-2 w-56 rounded-md border border-border bg-popover shadow-lg"
-        >
-          <div class="px-3 py-3 border-b border-border">
-            <p class="text-sm font-medium">{{ getUserName() }}</p>
-            <p class="text-xs text-muted-foreground">{{ currentUser()?.email }}</p>
-          </div>
+        @if (showUserDropdown()) {
+          <div
+            class="absolute right-0 mt-2 w-56 rounded-md border border-border bg-popover shadow-lg"
+          >
+            <div class="px-3 py-3 border-b border-border">
+              <p class="text-sm font-medium">{{ getUserName() }}</p>
+              <p class="text-xs text-muted-foreground">{{ currentUser()?.email }}</p>
+            </div>
 
-          <div class="p-1">
-            <button
-              (click)="navigateToProfile()"
-              class="flex w-full items-center gap-2 rounded-sm px-2 py-2 text-sm hover:bg-accent transition-colors"
-            >
-              <lucide-icon name="user" [size]="16"></lucide-icon>
-              Profile
-            </button>
-            <button
-              (click)="navigateToSettings()"
-              class="flex w-full items-center gap-2 rounded-sm px-2 py-2 text-sm hover:bg-accent transition-colors"
-            >
-              <lucide-icon name="settings" [size]="16"></lucide-icon>
-              Settings
-            </button>
-            <button
-              class="flex w-full items-center gap-2 rounded-sm px-2 py-2 text-sm hover:bg-accent transition-colors"
-            >
-              <lucide-icon name="help-circle" [size]="16"></lucide-icon>
-              Help & Support
-            </button>
-          </div>
+            <div class="p-1">
+              <button
+                (click)="navigateToProfile()"
+                class="flex w-full items-center gap-2 rounded-sm px-2 py-2 text-sm hover:bg-accent transition-colors"
+              >
+                <lucide-icon name="user" [size]="16"></lucide-icon>
+                Profile
+              </button>
+              <button
+                (click)="navigateToSettings()"
+                class="flex w-full items-center gap-2 rounded-sm px-2 py-2 text-sm hover:bg-accent transition-colors"
+              >
+                <lucide-icon name="settings" [size]="16"></lucide-icon>
+                Settings
+              </button>
+              <button
+                class="flex w-full items-center gap-2 rounded-sm px-2 py-2 text-sm hover:bg-accent transition-colors"
+              >
+                <lucide-icon name="help-circle" [size]="16"></lucide-icon>
+                Help & Support
+              </button>
+            </div>
 
-          <div class="p-1 border-t border-border">
-            <button
-              (click)="logout()"
-              class="flex w-full items-center gap-2 rounded-sm px-2 py-2 text-sm text-destructive hover:bg-accent transition-colors"
-            >
-              <lucide-icon name="LogOut" [size]="16"></lucide-icon>
-              Log out
-            </button>
+            <div class="p-1 border-t border-border">
+              <button
+                (click)="logout()"
+                class="flex w-full items-center gap-2 rounded-sm px-2 py-2 text-sm text-destructive hover:bg-accent transition-colors"
+              >
+                <lucide-icon name="LogOut" [size]="16"></lucide-icon>
+                Log out
+              </button>
+            </div>
           </div>
-        </div>
         }
       </div>
     </div>

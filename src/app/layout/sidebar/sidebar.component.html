@@ -26,74 +26,76 @@
         </svg>
       </div>
       @if (!collapsed()) {
-      <span class="text-lg font-semibold text-sidebar-foreground"> TaskFlow Pro </span>
+        <span class="text-lg font-semibold text-sidebar-foreground"> TaskFlow Pro </span>
       }
     </div>
 
     <!-- Main Navigation -->
     <nav class="flex-1 space-y-1 p-3">
       @for (item of navItems(); track item.path) {
-      <a
-        [routerLink]="item.path"
-        routerLinkActive="bg-sidebar-accent text-sidebar-accent-foreground"
-        [routerLinkActiveOptions]="{ exact: false }"
-        class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-smooth relative text-sidebar-muted-foreground hover:bg-sidebar-muted hover:text-sidebar-foreground"
-        [ngClass]="collapsed() ? 'justify-center px-2' : ''"
-        [title]="collapsed() ? item.label : ''"
-      >
-        <lucide-icon [name]="item.icon" [size]="20" class="shrink-0"></lucide-icon>
-        @if (!collapsed()) {
-        <span>{{ item.label }}</span>
-        } @if (item.badge && item.badge > 0) {
-        <span
-          class="flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground"
-          [ngClass]="collapsed() ? 'absolute -top-1 -right-1 h-4 min-w-4' : 'ml-auto'"
+        <a
+          [routerLink]="item.path"
+          routerLinkActive="bg-sidebar-accent text-sidebar-accent-foreground"
+          [routerLinkActiveOptions]="{ exact: false }"
+          class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-smooth relative text-sidebar-muted-foreground hover:bg-sidebar-muted hover:text-sidebar-foreground"
+          [ngClass]="collapsed() ? 'justify-center px-2' : ''"
+          [title]="collapsed() ? item.label : ''"
         >
-          {{ item.badge }}
-        </span>
-        }
-      </a>
+          <lucide-icon [name]="item.icon" [size]="20" class="shrink-0"></lucide-icon>
+          @if (!collapsed()) {
+            <span>{{ item.label }}</span>
+          }
+          @if (item.badge && item.badge > 0) {
+            <span
+              class="flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground"
+              [ngClass]="collapsed() ? 'absolute -top-1 -right-1 h-4 min-w-4' : 'ml-auto'"
+            >
+              {{ item.badge }}
+            </span>
+          }
+        </a>
       }
 
       <!-- Admin link - only visible for admins -->
       @if (currentUser()?.role === UserRole.ADMIN) {
-      <a
-        routerLink="/admin"
-        routerLinkActive="bg-sidebar-accent text-sidebar-accent-foreground"
-        class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-smooth relative text-sidebar-muted-foreground hover:bg-sidebar-muted hover:text-sidebar-foreground"
-        [ngClass]="collapsed() ? 'justify-center px-2' : ''"
-        title="Admin"
-      >
-        <lucide-icon name="Shield" [size]="20" class="shrink-0"></lucide-icon>
-        @if (!collapsed()) {
-        <span>Admin</span>
-        }
-      </a>
+        <a
+          routerLink="/admin"
+          routerLinkActive="bg-sidebar-accent text-sidebar-accent-foreground"
+          class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-smooth relative text-sidebar-muted-foreground hover:bg-sidebar-muted hover:text-sidebar-foreground"
+          [ngClass]="collapsed() ? 'justify-center px-2' : ''"
+          title="Admin"
+        >
+          <lucide-icon name="Shield" [size]="20" class="shrink-0"></lucide-icon>
+          @if (!collapsed()) {
+            <span>Admin</span>
+          }
+        </a>
       }
     </nav>
 
     <!-- Bottom Navigation -->
     <nav class="space-y-1 p-3 border-t border-sidebar-border">
-      @for (item of bottomNavItems; track item.path) {
-      <a
-        [routerLink]="item.path"
-        routerLinkActive="bg-sidebar-accent text-sidebar-accent-foreground"
-        class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-smooth relative text-sidebar-muted-foreground hover:bg-sidebar-muted hover:text-sidebar-foreground"
-        [ngClass]="collapsed() ? 'justify-center px-2' : ''"
-        [title]="collapsed() ? item.label : ''"
-      >
-        <lucide-icon [name]="item.icon" [size]="20" class="shrink-0"></lucide-icon>
-        @if (!collapsed()) {
-        <span>{{ item.label }}</span>
-        } @if (item.badge && item.badge > 0) {
-        <span
-          class="flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground"
-          [ngClass]="collapsed() ? 'absolute -top-1 -right-1 h-4 min-w-4' : 'ml-auto'"
+      @for (item of bottomNavItems(); track item.path) {
+        <a
+          [routerLink]="item.path"
+          routerLinkActive="bg-sidebar-accent text-sidebar-accent-foreground"
+          class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-smooth relative text-sidebar-muted-foreground hover:bg-sidebar-muted hover:text-sidebar-foreground"
+          [ngClass]="collapsed() ? 'justify-center px-2' : ''"
+          [title]="collapsed() ? item.label : ''"
         >
-          {{ item.badge }}
-        </span>
-        }
-      </a>
+          <lucide-icon [name]="item.icon" [size]="20" class="shrink-0"></lucide-icon>
+          @if (!collapsed()) {
+            <span>{{ item.label }}</span>
+          }
+          @if (item.badge && item.badge > 0) {
+            <span
+              class="flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground"
+              [ngClass]="collapsed() ? 'absolute -top-1 -right-1 h-4 min-w-4' : 'ml-auto'"
+            >
+              {{ item.badge }}
+            </span>
+          }
+        </a>
       }
     </nav>
 
@@ -104,24 +106,25 @@
         [ngClass]="collapsed() ? 'p-2 flex justify-center' : ''"
       >
         @if (collapsed()) {
-        <div
-          class="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-xs font-medium text-primary-foreground cursor-default"
-          [title]="currentUser()?.email || ''"
-        >
-          {{ getInitials(currentUser()?.email || '') }}
-        </div>
+          <div
+            class="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-xs font-medium text-primary-foreground cursor-default"
+            [title]="currentUser()?.email || ''"
+          >
+            {{ getInitials(currentUser()?.email || '') }}
+          </div>
         } @else {
-        <p class="text-xs text-sidebar-muted-foreground">Logged in as</p>
-        <p class="text-sm font-medium text-sidebar-foreground truncate">
-          {{ currentUser()?.email }}
-        </p>
-        @if (currentUser()?.role === UserRole.ADMIN) {
-        <span
-          class="inline-flex mt-1 items-center rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-medium text-primary"
-        >
-          Admin
-        </span>
-        } }
+          <p class="text-xs text-sidebar-muted-foreground">Logged in as</p>
+          <p class="text-sm font-medium text-sidebar-foreground truncate">
+            {{ currentUser()?.email }}
+          </p>
+          @if (currentUser()?.role === UserRole.ADMIN) {
+            <span
+              class="inline-flex mt-1 items-center rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-medium text-primary"
+            >
+              Admin
+            </span>
+          }
+        }
       </div>
     </div>
 
@@ -131,9 +134,9 @@
       class="absolute -right-3 top-20 h-6 w-6 rounded-full border border-sidebar-border bg-sidebar text-sidebar-foreground shadow-sm hover:bg-sidebar-muted transition-colors"
     >
       @if (collapsed()) {
-      <lucide-icon name="ChevronRight" [size]="12" class="mx-auto"></lucide-icon>
+        <lucide-icon name="ChevronRight" [size]="12" class="mx-auto"></lucide-icon>
       } @else {
-      <lucide-icon name="ChevronLeft" [size]="12" class="mx-auto"></lucide-icon>
+        <lucide-icon name="ChevronLeft" [size]="12" class="mx-auto"></lucide-icon>
       }
     </button>
   </div>

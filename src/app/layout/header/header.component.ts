@@ -29,7 +29,7 @@ export class HeaderComponent {
   private destroyRef = inject(DestroyRef);
 
   currentUser = this.authService.currentUserSignal;
-  showUserDropdown = false;
+  showUserDropdown = signal(false);
   private avatarError = signal(false);
 
   getInitials(): string {
@@ -61,21 +61,21 @@ export class HeaderComponent {
   }
 
   toggleUserDropdown() {
-    this.showUserDropdown = !this.showUserDropdown;
+    this.showUserDropdown.update((v) => !v);
   }
 
   navigateToProfile() {
     this.router.navigate(['/settings'], { queryParams: { tab: 'profile' } });
-    this.showUserDropdown = false;
+    this.showUserDropdown.set(false);
   }
 
   navigateToSettings() {
     this.router.navigate(['/settings']);
-    this.showUserDropdown = false;
+    this.showUserDropdown.set(false);
   }
 
   logout() {
     this.authService.logout().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
-    this.showUserDropdown = false;
+    this.showUserDropdown.set(false);
   }
 }

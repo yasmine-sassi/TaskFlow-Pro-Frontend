@@ -56,18 +56,16 @@ export class SidebarComponent {
     return this.baseNavItems;
   });
 
-  get bottomNavItems() {
-    return [
-      { path: '/search', label: 'My Workspace', icon: 'folder-open' },
-      {
-        path: '/notifications',
-        label: 'Notifications',
-        icon: 'Bell',
-        badge: this.notificationsService.unreadCountSignal(),
-      },
-      { path: '/settings', label: 'Settings', icon: 'Settings' },
-    ];
-  }
+  bottomNavItems = computed(() => [
+    { path: '/search', label: 'My Workspace', icon: 'folder-open' },
+    {
+      path: '/notifications',
+      label: 'Notifications',
+      icon: 'Bell',
+      badge: this.notificationsService.unreadCountSignal(),
+    },
+    { path: '/settings', label: 'Settings', icon: 'Settings' },
+  ]);
 
   toggleCollapse() {
     this.collapsed.update((v) => !v);

@@ -143,9 +143,6 @@ export class BoardComponent implements OnInit {
           }
           // Optionally show a toast notification
         },
-        error: () => {
-          // Optionally show error notification
-        },
       });
   }
 
@@ -174,9 +171,6 @@ export class BoardComponent implements OnInit {
     taskRequest.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (tasks) => {
         this.myTasks.set(tasks);
-        this.isLoading.set(false);
-      },
-      error: () => {
         this.isLoading.set(false);
       },
     });
